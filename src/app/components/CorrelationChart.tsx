@@ -401,10 +401,10 @@ export default function CorrelationChart() {
       )
     ).sort()
 
-    // Create datasets for trend view
+    // Create datasets for trend view - organized alphabetically by ticker
     const trendDatasets: any[] = []
     
-    // Add price lines for each stock
+    // Add both price and metric lines for each stock (grouped by ticker)
     compareData.results.forEach((result, idx) => {
       const priceData = allDates.map(date => {
         const point = result.data.find(p => p.date === date)
@@ -412,6 +412,13 @@ export default function CorrelationChart() {
         return isPriceMetricX ? point.x : point.y
       })
       
+      const metricData = allDates.map(date => {
+        const point = result.data.find(p => p.date === date)
+        if (!point) return null
+        return isPriceMetricX ? point.y : point.x
+      })
+      
+      // Add price line for this ticker
       trendDatasets.push({
         label: `${result.ticker} Price`,
         data: priceData,
@@ -420,17 +427,10 @@ export default function CorrelationChart() {
         yAxisID: 'y-left',
         tension: 0.1,
         fill: false,
-      })
-    })
-    
-    // Add metric lines for each stock
-    compareData.results.forEach((result, idx) => {
-      const metricData = allDates.map(date => {
-        const point = result.data.find(p => p.date === date)
-        if (!point) return null
-        return isPriceMetricX ? point.y : point.x
+        ticker: result.ticker, // For sorting
       })
       
+      // Add metric line for this ticker (immediately after price)
       trendDatasets.push({
         label: `${result.ticker} ${otherMetric.replace(/_/g, ' ')}`,
         data: metricData,
@@ -439,6 +439,7 @@ export default function CorrelationChart() {
         yAxisID: 'y-right',
         tension: 0.1,
         fill: false,
+        ticker: result.ticker, // For sorting
       })
     })
 

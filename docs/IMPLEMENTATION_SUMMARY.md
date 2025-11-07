@@ -2,7 +2,7 @@
 
 ## ✅ Implementation Complete
 
-Successfully implemented a natural language query interface for the Alternative Data Intelligence Dashboard using Claude AI (Anthropic). **NOW WITH MULTI-STOCK COMPARISON!**
+Successfully implemented a natural language query interface for the Alternative Data Intelligence Dashboard using Claude AI (Anthropic). **NOW WITH MULTI-STOCK COMPARISON AND TIME-SERIES VISUALIZATION!**
 
 ---
 
@@ -37,10 +37,12 @@ Successfully implemented a natural language query interface for the Alternative 
 - **Search Bar**: Large input with blue search button
 - **Example Queries**: 4 clickable query suggestions (including multi-stock)
 - **Current Query Badge**: Shows parsed parameters (single or multiple tickers)
+- **View Toggle (NEW)**: Switch between Correlation and Trend views
 - **Error Messages**: User-friendly error display
 - **Loading States**: Separate indicators for parsing and data fetch
 - **Multi-Stock Chart**: Color-coded scatter plot (Blue, Red, Green)
 - **Individual Correlations**: Each stock's correlation displayed separately
+- **Time-Series Charts (NEW)**: Dual Y-axis line charts for temporal analysis
 - **Hint Text**: "💡 Compare up to 3 stocks at once for best readability"
 - **Location**: `src/app/components/CorrelationChart.tsx`
 
@@ -83,9 +85,13 @@ Created comprehensive documentation:
 - ✅ Error messages with suggestions
 - ✅ Current query display badge (shows all tickers)
 - ✅ Maintains default view as fallback
-- ✅ **NEW**: Color-coded multi-stock charts
-- ✅ **NEW**: Individual correlation scores per stock
-- ✅ **NEW**: Hint text for 3-ticker limit
+- ✅ Color-coded multi-stock charts
+- ✅ Individual correlation scores per stock
+- ✅ Hint text for 3-ticker limit
+- ✅ **NEW**: View toggle between Correlation and Trend modes
+- ✅ **NEW**: Time-series visualization with dual Y-axes
+- ✅ **NEW**: Smart validation for Trend View (requires price)
+- ✅ **NEW**: Multi-stock trend charts with color-coded lines
 
 ### Error Handling
 - ✅ Invalid ticker detection
@@ -101,8 +107,11 @@ Created comprehensive documentation:
 - ✅ Proper error boundaries
 - ✅ Production-ready code
 - ✅ Builds successfully
-- ✅ **NEW**: Parallel data fetching with Promise.all
-- ✅ **NEW**: Backwards compatible with single-stock queries
+- ✅ Parallel data fetching with Promise.all
+- ✅ Backwards compatible with single-stock queries
+- ✅ **NEW**: Dual chart rendering (Scatter and Line)
+- ✅ **NEW**: Helper functions for price validation
+- ✅ **NEW**: Data transformation for time-series
 
 ---
 
@@ -121,10 +130,12 @@ Navigate to: http://localhost:3000
 2. "Does Twitter engagement predict NVDA stock movement?"
 3. "Show me employment signals vs price for META since 2024"
 
-**Multi-Stock (NEW):**
+**Multi-Stock:**
 4. "Compare TSLA vs NVDA Reddit sentiment"
 5. "Compare AAPL, MSFT, and GOOGL job postings vs price"
 6. "How do TSLA and NVDA differ on Twitter mentions?"
+
+**Then toggle to Trend View to see temporal patterns!**
 
 ### Run Tests
 ```bash
@@ -337,6 +348,28 @@ Documentation Files (All Updated):
 
 ---
 
+## 📈 Visualization Modes
+
+### Correlation View (Default)
+- Scatter plot showing relationship between two metrics
+- Each point represents one day's data
+- Color-coded by ticker for multi-stock
+- Pearson correlation coefficient displayed
+- Works with all metric combinations
+
+### Trend View (NEW)
+- Time-series line charts with dual Y-axes
+- **Left Y-axis**: Stock price (always)
+- **Right Y-axis**: Alternative data metric
+- **X-axis**: Date (chronological timeline)
+- **Requirement**: One metric must be `price`
+- **Single-Stock**: Blue price line, green metric line
+- **Multi-Stock**: Color-coded lines per stock
+  - Price lines: Blue, Red, Purple
+  - Metric lines: Green, Yellow, Teal
+- Interactive tooltips with date and values
+- Shows temporal patterns and trends
+
 ## ⚠️ Known Limitations
 
 1. **Maximum 3 Tickers Per Query** ✅ ADDRESSED
@@ -344,7 +377,12 @@ Documentation Files (All Updated):
    - Limited to 3 tickers for chart readability
    - Enforced with helpful error messages
 
-2. **Predefined Metrics Only**
+2. **Trend View Requires Price** ✅ ADDRESSED
+   - Trend View only available when price is one of the metrics
+   - Button automatically disabled with helpful message
+   - Works for both metricX and metricY positions
+
+3. **Predefined Metrics Only**
    - Limited to 11 metrics in database
    - Future: Add more alternative data sources
 

@@ -1,7 +1,7 @@
 # Demo Cheat Sheet - Quick Reference
 
 ## 🎯 One-Liner Pitch
-"I built a natural language interface using Claude AI that lets users query stock correlations in plain English instead of selecting parameters manually."
+"I built a natural language interface with dual visualization modes—correlation scatter plots and time-series charts—that lets users explore alternative data patterns in plain English using Claude AI."
 
 ---
 
@@ -16,24 +16,28 @@
 Type: "Show correlation between job postings and price for AAPL"
 ```
 - Watch "Analyzing..." → Parsed query badge → Chart updates
-- Point out: Correlation score, data points, emoji indicator
+- Point out: **"Two view buttons above chart"**
+- Correlation score, data points, emoji indicator
 
-### Step 3: Example Query (15 sec)
+### Step 3: Toggle to Trend View (NEW - 20 sec)
 ```
-Click: "Compare Reddit sentiment vs stock price for TSLA"
+Click: "Trend View" button
 ```
-- "Pre-built examples help users discover features"
+- **"Now showing time-series with dual Y-axes"**
+- **Point out: Blue price line (left axis), green metric line (right axis)**
+- **"Track how both metrics change over time"**
 
-### Step 4: Error Handling (20 sec)
+### Step 4: Multi-Stock Demo (20 sec)
 ```
-Type: "Show data for XYZ"
+Click example: "Compare TSLA vs NVDA Reddit sentiment"
 ```
-- "Clear error messages with actionable suggestions"
+- Show scatter plot, then click Trend View
+- **"Color-coded lines for each stock"**
 
-### Step 5: Technical Highlight (30 sec)
-- Open `parse-query/route.ts`
-- Show system prompt
-- "Claude extracts structured data, I validate it"
+### Step 5: Technical Highlight (20 sec)
+- "Built with Chart.js dual-axis configuration"
+- "Smart validation: Trend View requires price metric"
+- Show disabled button for queries without price
 
 ---
 
@@ -44,12 +48,16 @@ Type: "Show data for XYZ"
 - **Solution**: Natural language interface powered by AI
 
 ### 2. Technical Choices
-- **Claude Sonnet 4**: Reliable JSON output, fast, cost-effective
+- **Claude Haiku 4.5**: Reliable JSON output, fast, 90% cheaper than Sonnet
+- **Chart.js Dual Axes**: Time-series with different scales
 - **Next.js API Routes**: Serverless, easy deployment
 - **TypeScript**: Type safety throughout
 - **Multi-layer validation**: Don't trust AI blindly
+- **Smart Feature Detection**: Auto-disable Trend View without price
 
 ### 3. UX Focus
+- **Dual visualization modes for different analysis needs**
+- **View toggle with smart validation**
 - Loading states for feedback
 - Example queries for discovery
 - Error messages with suggestions
@@ -236,13 +244,14 @@ Layer 5: Supabase error handling
 
 ## 🔮 Future Enhancements to Mention
 
-1. **Multi-ticker comparison**: "Compare AAPL vs TSLA"
-2. **Query history**: Save and recall past queries
-3. **Voice input**: Speech-to-text
-4. **Advanced stats**: R², p-values
-5. **Export results**: Download CSV/PNG
-6. **Query caching**: Redis for common queries
-7. **Auto-suggestions**: As-you-type predictions
+1. ~~**Multi-ticker comparison**~~: ✅ **DONE** (up to 3 stocks)
+2. ~~**Time-series visualization**~~: ✅ **DONE** (dual Y-axes)
+3. **Query history**: Save and recall past queries
+4. **Voice input**: Speech-to-text
+5. **Advanced stats**: R², p-values, trend lines
+6. **Export results**: Download CSV/PNG
+7. **Query caching**: Redis for common queries
+8. **Auto-suggestions**: As-you-type predictions
 
 ---
 

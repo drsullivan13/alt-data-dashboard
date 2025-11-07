@@ -4,8 +4,10 @@ A Next.js application for analyzing correlations between alternative data signal
 
 ## 🌟 Key Features
 
-### 📊 Correlation Analysis
-- Interactive scatter plots with Chart.js
+### 📊 Dual Visualization Modes
+- **Correlation View**: Interactive scatter plots showing metric relationships
+- **Trend View (NEW)**: Time-series with dual Y-axes for temporal analysis
+- Toggle between views with one click
 - Pearson correlation coefficient calculation
 - 12 tickers: AAPL, AMZN, DELL, GOOGL, JNJ, META, MSFT, NKE, NVDA, TSLA, UBER, V
 - 11 alternative data metrics: job_posts, reddit_mentions, twitter_sentiment, and more
@@ -204,9 +206,33 @@ Quick demo flow (< 2 minutes):
 
 See [DEMO_CHEAT_SHEET.md](./docs/DEMO_CHEAT_SHEET.md) for complete demo guide.
 
+## 📈 Visualization Modes
+
+### Correlation View
+- Scatter plot showing relationship between two metrics
+- Each point represents one day's data
+- Visual correlation strength with color coding
+- Available for all metric combinations
+
+### Trend View (NEW)
+- Time-series line charts with dual Y-axes
+- Left axis: Stock price (always)
+- Right axis: Alternative data metric
+- Track both metrics over time simultaneously
+- **Requirement**: One metric must be `price`
+- Supports both single-stock and multi-stock comparisons
+- Color-coded lines for easy distinction
+
+**Multi-Stock Trend View:**
+- Price lines: Blue, Red, Purple (one per stock)
+- Metric lines: Green, Yellow, Teal (one per stock)
+- Legend clearly identifies each line
+- All stocks shown on same timeline
+
 ## 🚀 Future Enhancements
 
 - [x] Multi-ticker comparison (up to 3 stocks) ✅ **COMPLETED**
+- [x] Time-series visualization with dual axes ✅ **COMPLETED**
 - [ ] Query history and favorites
 - [ ] Voice input support
 - [ ] Advanced statistical analysis (R², p-values)

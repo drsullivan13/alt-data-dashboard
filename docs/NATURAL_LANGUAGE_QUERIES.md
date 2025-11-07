@@ -1,7 +1,7 @@
 # Natural Language Query Interface
 
 ## Overview
-The Alternative Data Intelligence Dashboard now supports natural language queries powered by Claude (Anthropic API). Users can ask questions in plain English instead of manually selecting parameters.
+The Alternative Data Intelligence Dashboard supports natural language queries powered by Claude (Anthropic API). Users can ask questions in plain English instead of manually selecting parameters. Results can be viewed in two modes: Correlation View (scatter plot) or Trend View (time-series with dual Y-axes).
 
 ## Features
 
@@ -18,7 +18,14 @@ The Alternative Data Intelligence Dashboard now supports natural language querie
 - Detects date ranges ("since 2024", "from January 2024")
 - Validates all parameters against available data
 
-### 3. Error Handling
+### 3. Dual Visualization Modes (NEW)
+- **Correlation View**: Scatter plot showing metric relationships
+- **Trend View**: Time-series with dual Y-axes for temporal analysis
+- Toggle between views with pill-shaped buttons
+- Trend View requires price as one of the metrics
+- View mode persists across query changes
+
+### 4. Error Handling
 - Clear error messages for invalid queries
 - Suggestions for rephrasing
 - **3-ticker limit enforcement**: Helpful error when exceeding limit
@@ -227,10 +234,34 @@ The interface handles:
 ## User Experience Highlights
 
 1. **Progressive Enhancement**: Default chart loads immediately, search enhances functionality
-2. **Visual Feedback**: Loading spinners during both parsing and data fetching
-3. **Current Query Display**: Shows parsed parameters in blue badge
-4. **Correlation Interpretation**: Emoji indicators for correlation strength
-5. **Responsive Design**: Works on desktop and mobile
+2. **Dual Visualization Modes**: Toggle between Correlation and Trend views
+3. **Visual Feedback**: Loading spinners during both parsing and data fetching
+4. **Current Query Display**: Shows parsed parameters in blue badge
+5. **Correlation Interpretation**: Emoji indicators for correlation strength
+6. **Temporal Analysis**: Trend View shows how metrics evolve over time
+7. **Smart Validation**: Trend View automatically disabled when price not included
+8. **Responsive Design**: Works on desktop and mobile
+
+## Visualization Features
+
+### Correlation View
+- Scatter plot with each point representing one day
+- X-axis: First metric (e.g., job_posts)
+- Y-axis: Second metric (e.g., price)
+- Shows strength of relationship between metrics
+- Available for all metric combinations
+
+### Trend View (NEW)
+- Time-series line chart with dual Y-axes
+- **Left Y-axis**: Stock price (blue line for single stock)
+- **Right Y-axis**: Alternative metric (green line for single stock)
+- **X-axis**: Date (chronological)
+- **Multi-Stock**: Different colors per stock
+  - Price lines: Blue, Red, Purple
+  - Metric lines: Green, Yellow, Teal
+- **Requirement**: One metric must be `price`
+- Shows temporal patterns and trends
+- Interactive tooltip with date and values
 
 ## Limitations
 

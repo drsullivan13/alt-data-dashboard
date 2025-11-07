@@ -27,6 +27,18 @@
 - Blue "Search" button (disabled when empty)
 - Shows "Analyzing..." while processing
 
+### View Toggle (NEW)
+```
+┌──────────────────────┬──────────────┐
+│ [Correlation View]   │  Trend View  │
+└──────────────────────┴──────────────┘
+```
+- Two pill-shaped buttons above the chart
+- **Correlation View**: Scatter plot showing metric relationships
+- **Trend View**: Time-series with dual Y-axes (requires price as a metric)
+- Active button highlighted in blue
+- Trend View disabled with helpful message if price not included
+
 ### Example Queries
 ```
 Try: [Show correlation between job...] [Compare Reddit sentiment...]
@@ -139,13 +151,30 @@ News mentions vs price for multiple tech stocks
 - **Hover**: Shows date and exact values
 - **Color**: Blue points
 
-### Multi-Stock Chart (NEW)
+### Multi-Stock Chart (Correlation View)
 - **X-axis**: First metric (e.g., reddit_sentiment)
 - **Y-axis**: Second metric (e.g., price)
 - **Colors**: Blue, Red, Green (one per stock)
 - **Legend**: Shows each ticker with its correlation coefficient
 - **Hover**: Shows ticker, date, and exact values
 - **Correlation per stock**: Displayed below chart for easy comparison
+
+### Single-Stock Trend View (NEW)
+- **X-axis**: Date (chronological timeline)
+- **Left Y-axis**: Stock Price (blue line)
+- **Right Y-axis**: Alternative metric (green line)
+- **Hover**: Shows date and values for both metrics
+- **Two lines**: Price and metric overlaid for temporal comparison
+
+### Multi-Stock Trend View (NEW)
+- **X-axis**: Date (chronological timeline)
+- **Left Y-axis**: Stock Price (shared by all stocks)
+  - Price lines: Blue, Red, Purple
+- **Right Y-axis**: Alternative metric (shared by all stocks)
+  - Metric lines: Green, Yellow, Teal
+- **Legend**: "AAPL Price", "TSLA Price", "AAPL Job Posts", etc.
+- **Hover**: Shows date and values for all visible lines
+- **Note**: Trend View only available when price is one of the metrics
 
 ## Troubleshooting
 
@@ -157,9 +186,16 @@ News mentions vs price for multiple tech stocks
 **Problem**: Ticker not in database
 **Solution**: Use one of: AAPL, AMZN, DELL, GOOGL, JNJ, META, MSFT, NKE, NVDA, TSLA, UBER, V
 
-### "For chart readability, please limit comparisons to 3 stocks" (NEW)
+### "For chart readability, please limit comparisons to 3 stocks"
 **Problem**: Query requested more than 3 tickers
 **Solution**: The error message will suggest the first 3 tickers. Use those or choose a different set of 3.
+
+### Trend View button is disabled
+**Problem**: Trend View requires price as one of the metrics
+**Solution**: Make sure your query includes price. Examples:
+- ✅ "Show AAPL job postings vs price" (has price)
+- ✅ "Compare TSLA vs NVDA Reddit sentiment vs price" (has price)
+- ❌ "Show job_posts vs reddit_mentions for AAPL" (no price)
 
 ### "No data found"
 **Problem**: Date range has no data or metrics are null
