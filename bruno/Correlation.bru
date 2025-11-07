@@ -1,0 +1,25 @@
+meta {
+  name: Correlation
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:3000/api/correlation
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "ticker": "AAPL",
+    "metricX": "job_posts",
+    "metricY": "price",
+    "startDate": "2024-01-01"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
