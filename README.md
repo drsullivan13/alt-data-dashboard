@@ -21,13 +21,14 @@ A Next.js application for analyzing correlations between alternative data signal
 
 ### Prerequisites
 ```bash
-node >= 18.0.0
-npm >= 9.0.0
+bun >= 1.0.0  # Recommended: Fast JavaScript runtime
+# OR node >= 18.0.0 (if you prefer npm)
 ```
 
 ### Installation
 ```bash
-npm install
+bun install  # Recommended (faster)
+# OR: npm install
 ```
 
 ### Environment Variables
@@ -40,15 +41,17 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 ### Run Development Server
 ```bash
-npm run dev
+bun run dev  # Recommended (faster startup)
+# OR: npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Build for Production
 ```bash
-npm run build
-npm start
+bun run build  # Recommended (faster builds)
+bun run start
+# OR: npm run build && npm start
 ```
 
 ## 📖 Documentation
@@ -61,16 +64,18 @@ Comprehensive documentation is available in the [`docs/`](./docs) directory:
 - **[IMPLEMENTATION_SUMMARY.md](./docs/IMPLEMENTATION_SUMMARY.md)** - Complete implementation details
 - **[DEPLOYMENT_CHECKLIST.md](./docs/DEPLOYMENT_CHECKLIST.md)** - Pre-deployment verification
 - **[DEMO_CHEAT_SHEET.md](./docs/DEMO_CHEAT_SHEET.md)** - Quick reference for interviews
+- **[BUN_OPTIMIZATIONS.md](./docs/BUN_OPTIMIZATIONS.md)** - Bun runtime optimizations and cost savings
 
 ## 🧪 Testing
 
 Run the API test suite:
 ```bash
 # Terminal 1: Start dev server
-npm run dev
+bun run dev
 
 # Terminal 2: Run tests
-node test-api.js
+bun run test:api
+# OR: node test-api.js
 ```
 
 ## 💡 Example Queries
@@ -86,11 +91,12 @@ Show me employment signals vs price for META since 2024
 
 ## 🛠️ Tech Stack
 
+- **Runtime**: Bun 1.x (recommended) or Node.js 18+
 - **Framework**: Next.js 16.0.1 with App Router
 - **Language**: TypeScript 5
 - **UI**: React 19.2.0 + Tailwind CSS 4
 - **Charts**: Chart.js 4.5.1 + react-chartjs-2
-- **AI**: Anthropic Claude Sonnet 4 (@anthropic-ai/sdk 0.68.0)
+- **AI**: Anthropic Claude Haiku 4.5 (@anthropic-ai/sdk 0.68.0)
 - **Database**: Supabase (PostgreSQL)
 - **Deployment**: Vercel-ready
 

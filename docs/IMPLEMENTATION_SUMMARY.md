@@ -113,12 +113,13 @@ node test-api.js
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
+| Runtime | Bun | 1.x (recommended) |
 | Framework | Next.js | 16.0.1 |
-| Runtime | React | 19.2.0 |
+| UI Library | React | 19.2.0 |
 | Language | TypeScript | 5.x |
 | Styling | Tailwind CSS | 4.x |
 | Charts | Chart.js | 4.5.1 |
-| AI | Anthropic Claude | Sonnet 4 |
+| AI | Anthropic Claude | Haiku 4.5 |
 | Database | Supabase | PostgreSQL |
 | SDK | @anthropic-ai/sdk | 0.68.0 |
 

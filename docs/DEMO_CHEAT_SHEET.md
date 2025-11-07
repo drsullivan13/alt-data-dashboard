@@ -331,14 +331,14 @@ I'd love to extend this with multi-ticker comparisons and query caching if given
 ## 📱 Quick Commands
 
 ```bash
-# Start dev server
-npm run dev
+# Start dev server (with Bun - faster!)
+bun run dev
 
 # Run tests
-node test-api.js
+bun run test:api
 
 # Build for production
-npm run build
+bun run build
 
 # Check environment
 cat .env.local

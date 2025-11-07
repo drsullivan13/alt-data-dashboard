@@ -41,6 +41,13 @@ Welcome to the Alternative Data Intelligence Dashboard documentation. This direc
   - Performance checks
   - Production deployment steps
 
+- **[BUN_OPTIMIZATIONS.md](./BUN_OPTIMIZATIONS.md)** - Bun runtime guide and optimizations
+  - Why use Bun (3-4x faster)
+  - Installation and setup
+  - Performance benchmarks
+  - Cost savings with Haiku 4.5
+  - Deployment with Bun
+
 ### For Interviews/Demos
 - **[DEMO_CHEAT_SHEET.md](./DEMO_CHEAT_SHEET.md)** - Quick reference for presentations
   - One-liner pitch
@@ -53,6 +60,7 @@ Welcome to the Alternative Data Intelligence Dashboard documentation. This direc
 
 ### I want to...
 - **Use the dashboard**: Start with [USAGE_GUIDE.md](./USAGE_GUIDE.md)
+- **Optimize performance**: Read [BUN_OPTIMIZATIONS.md](./BUN_OPTIMIZATIONS.md)
 - **Understand the code**: Read [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **Deploy to production**: Follow [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)
 - **Prepare for a demo**: Review [DEMO_CHEAT_SHEET.md](./DEMO_CHEAT_SHEET.md)

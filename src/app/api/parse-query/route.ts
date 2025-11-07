@@ -66,9 +66,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Call Anthropic API
+    // Call Anthropic API - Using Haiku 4.5 (latest) for speed and cost efficiency
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 500,
       temperature: 0,
       system: SYSTEM_PROMPT,

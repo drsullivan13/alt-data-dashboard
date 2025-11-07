@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "dev": "bun next dev",
+    "build": "bun next build",
+    "start": "bun next start",
+    "lint": "bun eslint",
+    "test": "bun test",
+    "test:api": "bun run test-api.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
