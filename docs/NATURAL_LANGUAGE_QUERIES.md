@@ -8,11 +8,12 @@ The Alternative Data Intelligence Dashboard now supports natural language querie
 ### 1. Natural Language Input
 - **Search Box**: Large, prominent search input at the top of the dashboard
 - **Example Queries**: Clickable buttons with pre-written examples
-- **Real-time Parsing**: Queries are parsed using Claude Sonnet 4
+- **Real-time Parsing**: Queries are parsed using Claude Haiku 4.5
 - **Loading States**: Visual feedback during parsing and data fetching
 
 ### 2. Query Parsing
-- Extracts ticker symbols (AAPL, TSLA, etc.)
+- Extracts ticker symbols (single: AAPL, or multiple: TSLA, NVDA)
+- **Multi-stock support**: Compare up to 3 stocks simultaneously
 - Identifies metrics to correlate (job_posts, price, sentiment, etc.)
 - Detects date ranges ("since 2024", "from January 2024")
 - Validates all parameters against available data
@@ -20,6 +21,7 @@ The Alternative Data Intelligence Dashboard now supports natural language querie
 ### 3. Error Handling
 - Clear error messages for invalid queries
 - Suggestions for rephrasing
+- **3-ticker limit enforcement**: Helpful error when exceeding limit
 - Graceful fallback to default view
 
 ## Available Tickers
@@ -40,26 +42,35 @@ AAPL, AMZN, DELL, GOOGL, JNJ, META, MSFT, NKE, NVDA, TSLA, UBER, V
 
 ## Example Queries
 
-### Basic Correlations
+### Single Stock Correlations
 ```
 Show correlation between job postings and price for AAPL
-Compare Reddit sentiment vs stock price for TSLA
 Does Twitter engagement predict NVDA stock movement?
+How do job posts relate to AAPL stock price?
+Show NVDA employee count vs stock price
+```
+
+### Multi-Stock Comparisons (NEW)
+```
+Compare TSLA vs NVDA Reddit sentiment
+Compare AAPL, MSFT, and GOOGL job postings vs price
+How do TSLA and NVDA differ on Twitter mentions?
+Compare hiring trends for META vs GOOGL
 ```
 
 ### With Date Filters
 ```
 Show me employment signals vs price for META since 2024
 GOOGL job postings correlation with price from January 2024
+Compare TSLA vs NVDA Reddit sentiment since 2024
 Analyze UBER Twitter sentiment vs price since 2023
 ```
 
 ### Natural Language Variations
 ```
-How do job posts relate to AAPL stock price?
 Is there a connection between Reddit buzz and TSLA price?
 Do hiring trends predict META stock performance?
-Show NVDA employee count vs stock price
+Which has better Twitter engagement: AAPL or MSFT?
 ```
 
 ## API Endpoints
@@ -67,14 +78,14 @@ Show NVDA employee count vs stock price
 ### POST /api/parse-query
 Parses natural language queries into structured parameters.
 
-**Request:**
+**Single Stock Request:**
 ```json
 {
   "query": "Show correlation between job postings and price for AAPL"
 }
 ```
 
-**Response:**
+**Single Stock Response:**
 ```json
 {
   "success": true,
@@ -88,8 +99,28 @@ Parses natural language queries into structured parameters.
 }
 ```
 
+**Multi-Stock Request:**
+```json
+{
+  "query": "Compare TSLA vs NVDA Reddit sentiment"
+}
+```
+
+**Multi-Stock Response:**
+```json
+{
+  "success": true,
+  "parsed": {
+    "tickers": ["TSLA", "NVDA"],
+    "metricX": "reddit_sentiment",
+    "metricY": "price"
+  },
+  "confidence": "high"
+}
+```
+
 ### POST /api/correlation
-Fetches correlation data (existing endpoint, now used by NL interface).
+Fetches correlation data for a single stock.
 
 **Request:**
 ```json
@@ -98,6 +129,42 @@ Fetches correlation data (existing endpoint, now used by NL interface).
   "metricX": "job_posts",
   "metricY": "price",
   "startDate": "2024-01-01"
+}
+```
+
+### POST /api/compare (NEW)
+Fetches correlation data for multiple stocks in parallel.
+
+**Request:**
+```json
+{
+  "tickers": ["TSLA", "NVDA"],
+  "metricX": "reddit_sentiment",
+  "metricY": "price",
+  "startDate": "2024-01-01"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "metricX": "reddit_sentiment",
+  "metricY": "price",
+  "results": [
+    {
+      "ticker": "NVDA",
+      "correlation": 0.7234,
+      "dataPoints": 245,
+      "data": [...]
+    },
+    {
+      "ticker": "TSLA",
+      "correlation": 0.5612,
+      "dataPoints": 248,
+      "data": [...]
+    }
+  ]
 }
 ```
 
@@ -165,12 +232,21 @@ The interface handles:
 4. **Correlation Interpretation**: Emoji indicators for correlation strength
 5. **Responsive Design**: Works on desktop and mobile
 
+## Limitations
+
+### 3-Ticker Maximum
+For chart readability, multi-stock comparisons are limited to 3 tickers. Queries with more than 3 tickers will return a helpful error message suggesting the first 3.
+
+### Backwards Compatibility
+Single-stock queries use the existing `/api/correlation` endpoint, while multi-stock queries use the new `/api/compare` endpoint. This ensures no breaking changes to existing functionality.
+
 ## Future Enhancements
 
 Potential improvements:
 - Voice input support
 - Query history and favorites
-- Multi-ticker comparisons
+- More than 3 stocks (with tabbed or paginated interface)
 - Advanced statistical analysis requests
 - Export/share query results
 - Query auto-suggestions as you type
+- Comparative analysis insights (e.g., "TSLA has stronger correlation than NVDA")

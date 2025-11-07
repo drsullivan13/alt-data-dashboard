@@ -59,39 +59,52 @@ Try: [Show correlation between job...] [Compare Reddit sentiment...]
 
 ## Query Examples by Use Case
 
-### 1. Job Market Signals
+### 1. Job Market Signals (Single Stock)
 ```
 Show correlation between job postings and price for AAPL
 Do hiring trends predict META stock performance?
 GOOGL job posts vs stock price since 2024
 ```
 
-### 2. Social Media Sentiment
+### 2. Job Market Signals (Multi-Stock) NEW
 ```
-Compare Reddit sentiment vs stock price for TSLA
+Compare AAPL, MSFT, and GOOGL job postings vs price
+Which has stronger hiring signals: META or GOOGL?
+Compare hiring trends for TSLA vs NVDA
+```
+
+### 3. Social Media Sentiment (Single Stock)
+```
 Does Twitter engagement predict NVDA stock movement?
 Show me stocktwits sentiment correlation with UBER price
 ```
 
-### 3. Employee Growth
+### 4. Social Media Sentiment (Multi-Stock) NEW
+```
+Compare TSLA vs NVDA Reddit sentiment
+How do AAPL and MSFT differ on Twitter mentions?
+Compare Reddit buzz: META vs GOOGL
+```
+
+### 5. Employee Growth
 ```
 Show employee count vs price for META
 Does LinkedIn headcount predict stock price for MSFT?
-Analyze employee growth and stock performance for GOOGL
+Compare employee growth for AAPL vs GOOGL
 ```
 
-### 4. AI Scores
+### 6. AI Scores
 ```
 Show AI employment score vs price for TSLA
 Does overall AI score correlate with AAPL stock?
-Compare employment AI signals with META price
+Compare employment AI signals: TSLA vs NVDA
 ```
 
-### 5. News and Media
+### 7. News and Media
 ```
 Show news mentions correlation with NVDA price
-Does media coverage predict TSLA stock movement?
-News mentions vs price for AAPL since January
+Compare news coverage for AAPL vs MSFT
+News mentions vs price for multiple tech stocks
 ```
 
 ## Tips for Better Results
@@ -101,10 +114,12 @@ News mentions vs price for AAPL since January
 - **Clear metrics**: "Compare Reddit sentiment and stock price for TSLA"
 - **Include ticker**: "Does Twitter engagement predict NVDA stock?"
 - **Date ranges**: "META employment vs price since 2024"
+- **Multi-stock (2-3 tickers)**: "Compare TSLA vs NVDA Reddit sentiment"
+- **Up to 3 stocks**: "Compare AAPL, MSFT, and GOOGL job postings"
 
 ### ❌ Queries to Avoid
 - **Too vague**: "Show me some data"
-- **Multiple tickers**: "Compare AAPL and TSLA" (not yet supported)
+- **Too many tickers**: "Compare AAPL, TSLA, NVDA, and MSFT" (max 3)
 - **Invalid metrics**: "Show market cap vs volume" (market cap not in metrics)
 - **Typos in tickers**: "AAL" instead of "AAPL"
 
@@ -117,12 +132,20 @@ News mentions vs price for AAPL since January
 - **-0.7 to -0.3**: 🟡 Moderate negative correlation
 - **-1.0 to -0.7**: 🔴 Strong negative correlation
 
-### Chart Interpretation
+### Single-Stock Chart
 - **X-axis**: First metric (e.g., job_posts)
 - **Y-axis**: Second metric (e.g., price)
 - **Each point**: One day's data
 - **Hover**: Shows date and exact values
-- **Trend line**: (Future enhancement)
+- **Color**: Blue points
+
+### Multi-Stock Chart (NEW)
+- **X-axis**: First metric (e.g., reddit_sentiment)
+- **Y-axis**: Second metric (e.g., price)
+- **Colors**: Blue, Red, Green (one per stock)
+- **Legend**: Shows each ticker with its correlation coefficient
+- **Hover**: Shows ticker, date, and exact values
+- **Correlation per stock**: Displayed below chart for easy comparison
 
 ## Troubleshooting
 
@@ -133,6 +156,10 @@ News mentions vs price for AAPL since January
 ### "Invalid ticker"
 **Problem**: Ticker not in database
 **Solution**: Use one of: AAPL, AMZN, DELL, GOOGL, JNJ, META, MSFT, NKE, NVDA, TSLA, UBER, V
+
+### "For chart readability, please limit comparisons to 3 stocks" (NEW)
+**Problem**: Query requested more than 3 tickers
+**Solution**: The error message will suggest the first 3 tickers. Use those or choose a different set of 3.
 
 ### "No data found"
 **Problem**: Date range has no data or metrics are null

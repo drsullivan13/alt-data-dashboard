@@ -10,9 +10,10 @@ A Next.js application for analyzing correlations between alternative data signal
 - 12 tickers: AAPL, AMZN, DELL, GOOGL, JNJ, META, MSFT, NKE, NVDA, TSLA, UBER, V
 - 11 alternative data metrics: job_posts, reddit_mentions, twitter_sentiment, and more
 
-### 🤖 Natural Language Queries (NEW)
+### 🤖 Natural Language Queries
 - **Ask questions in plain English**: "Show correlation between job postings and price for AAPL"
-- **AI-powered parsing**: Claude Sonnet 4 extracts structured parameters
+- **Multi-stock comparison**: "Compare TSLA vs NVDA Reddit sentiment" (up to 3 stocks)
+- **AI-powered parsing**: Claude Haiku 4.5 extracts structured parameters
 - **Example queries**: Clickable suggestions for quick exploration
 - **Smart error handling**: Helpful messages when queries fail
 - **Real-time feedback**: Loading states and parsed query display
@@ -82,11 +83,18 @@ bun run test:api
 
 Try these natural language queries:
 
+### Single Stock Analysis
 ```
 Show correlation between job postings and price for AAPL
-Compare Reddit sentiment vs stock price for TSLA
 Does Twitter engagement predict NVDA stock movement?
 Show me employment signals vs price for META since 2024
+```
+
+### Multi-Stock Comparison (NEW)
+```
+Compare TSLA vs NVDA Reddit sentiment
+Compare AAPL, MSFT, and GOOGL job postings vs price
+How do TSLA and NVDA differ on Twitter mentions?
 ```
 
 ## 🛠️ Tech Stack
@@ -108,7 +116,8 @@ alt-data-dashboard/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── parse-query/route.ts    # Natural language parser
-│   │   │   └── correlation/route.ts     # Correlation calculator
+│   │   │   ├── correlation/route.ts     # Single-stock correlation
+│   │   │   └── compare/route.ts         # Multi-stock comparison (NEW)
 │   │   ├── components/
 │   │   │   └── CorrelationChart.tsx     # Main chart component
 │   │   ├── layout.tsx
@@ -127,10 +136,10 @@ alt-data-dashboard/
 ### Natural Language Processing
 1. User enters query in search box
 2. Query sent to `/api/parse-query`
-3. Claude AI extracts: ticker, metricX, metricY, dates
-4. Validation against whitelists
-5. Structured parameters sent to `/api/correlation`
-6. Chart updates with correlation data
+3. Claude AI extracts: ticker(s), metricX, metricY, dates
+4. Validation against whitelists (max 3 tickers enforced)
+5. Structured parameters sent to `/api/correlation` (single) or `/api/compare` (multi)
+6. Chart updates with correlation data (color-coded for multi-stock)
 
 ### Error Handling
 - Multi-layer validation (client, API, AI response)
@@ -197,13 +206,14 @@ See [DEMO_CHEAT_SHEET.md](./docs/DEMO_CHEAT_SHEET.md) for complete demo guide.
 
 ## 🚀 Future Enhancements
 
-- [ ] Multi-ticker comparison
+- [x] Multi-ticker comparison (up to 3 stocks) ✅ **COMPLETED**
 - [ ] Query history and favorites
 - [ ] Voice input support
 - [ ] Advanced statistical analysis (R², p-values)
 - [ ] Export results (CSV, PNG)
 - [ ] Query caching with Redis
 - [ ] Real-time data updates
+- [ ] More than 3 stocks comparison with tabbed interface
 
 ## 📝 License
 
