@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Scatter } from 'react-chartjs-2'
+import { Scatter, Line } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   LinearScale,
   PointElement,
   LineElement,
+  CategoryScale,
   Tooltip,
   Legend,
   ChartOptions,
@@ -14,7 +15,7 @@ import {
 import type { ParsedQuery, ParseQueryResponse, CompareResponse, CompareResult } from '@/types/query'
 
 // Register Chart.js components
-ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
 
 interface CorrelationData {
   ticker: string
@@ -25,11 +26,24 @@ interface CorrelationData {
   data: Array<{ date: string; x: number; y: number }>
 }
 
-// Chart colors for multi-stock comparison
+// Chart colors for multi-stock comparison (scatter plot)
 const CHART_COLORS = [
   { bg: 'rgba(59, 130, 246, 0.5)', border: 'rgba(59, 130, 246, 1)' },    // Blue
   { bg: 'rgba(239, 68, 68, 0.5)', border: 'rgba(239, 68, 68, 1)' },      // Red
   { bg: 'rgba(34, 197, 94, 0.5)', border: 'rgba(34, 197, 94, 1)' },      // Green
+]
+
+// Colors for time-series lines
+const PRICE_COLORS = [
+  { line: 'rgba(59, 130, 246, 1)', fill: 'rgba(59, 130, 246, 0.1)' },    // Blue
+  { line: 'rgba(239, 68, 68, 1)', fill: 'rgba(239, 68, 68, 0.1)' },      // Red
+  { line: 'rgba(168, 85, 247, 1)', fill: 'rgba(168, 85, 247, 0.1)' },    // Purple
+]
+
+const METRIC_COLORS = [
+  { line: 'rgba(34, 197, 94, 1)', fill: 'rgba(34, 197, 94, 0.1)' },      // Green
+  { line: 'rgba(234, 179, 8, 1)', fill: 'rgba(234, 179, 8, 0.1)' },      // Yellow
+  { line: 'rgba(20, 184, 166, 1)', fill: 'rgba(20, 184, 166, 0.1)' },    // Teal
 ]
 
 const EXAMPLE_QUERIES = [
@@ -47,6 +61,7 @@ export default function CorrelationChart() {
   const [query, setQuery] = useState('')
   const [isParsingQuery, setIsParsingQuery] = useState(false)
   const [currentQuery, setCurrentQuery] = useState<ParsedQuery | null>(null)
+  const [viewMode, setViewMode] = useState<'correlation' | 'trend'>('correlation')
 
   // Fetch correlation data based on current query parameters
   const fetchCorrelationData = async (params: ParsedQuery) => {
@@ -175,6 +190,27 @@ export default function CorrelationChart() {
     }, 100)
   }
 
+  // Check if price is one of the metrics (required for trend view)
+  const hasPriceMetric = (metricX: string, metricY: string): boolean => {
+    return metricX === 'price' || metricY === 'price'
+  }
+
+  // Get the non-price metric
+  const getNonPriceMetric = (metricX: string, metricY: string): string => {
+    return metricX === 'price' ? metricY : metricX
+  }
+
+  // Check if trend view is available
+  const isTrendViewAvailable = (): boolean => {
+    if (data) {
+      return hasPriceMetric(data.metricX, data.metricY)
+    }
+    if (compareData) {
+      return hasPriceMetric(compareData.metricX, compareData.metricY)
+    }
+    return false
+  }
+
   // Render search interface
   const renderSearchInterface = () => (
     <div className="mb-6 space-y-4">
@@ -236,6 +272,49 @@ export default function CorrelationChart() {
     </div>
   )
 
+  // Render view toggle buttons
+  const renderViewToggle = () => {
+    const trendAvailable = isTrendViewAvailable()
+    
+    return (
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setViewMode('correlation')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            viewMode === 'correlation'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Correlation View
+        </button>
+        <button
+          onClick={() => {
+            if (trendAvailable) {
+              setViewMode('trend')
+            }
+          }}
+          disabled={!trendAvailable}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            viewMode === 'trend'
+              ? 'bg-blue-600 text-white'
+              : trendAvailable
+              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          }`}
+          title={!trendAvailable ? 'Trend view requires price as one of the metrics' : ''}
+        >
+          Trend View
+        </button>
+        {!trendAvailable && (
+          <span className="text-sm text-gray-500 self-center ml-2">
+            💡 Trend view requires price as one of the metrics
+          </span>
+        )}
+      </div>
+    )
+  }
+
   if (loading && !data && !compareData) {
     return (
       <div className="w-full">
@@ -260,7 +339,13 @@ export default function CorrelationChart() {
 
   // Render multi-stock comparison
   if (compareData) {
-    const chartData = {
+    // Prepare data for trend view
+    const isPriceMetricX = compareData.metricX === 'price'
+    const priceMetric = isPriceMetricX ? compareData.metricX : compareData.metricY
+    const otherMetric = isPriceMetricX ? compareData.metricY : compareData.metricX
+
+    // Correlation view (scatter plot)
+    const correlationChartData = {
       datasets: compareData.results.map((result, idx) => ({
         label: `${result.ticker}: ${compareData.metricX} vs ${compareData.metricY} (r=${result.correlation})`,
         data: result.data.map(point => ({ x: point.x, y: point.y })),
@@ -272,7 +357,7 @@ export default function CorrelationChart() {
       })),
     }
 
-    const options: ChartOptions<'scatter'> = {
+    const correlationOptions: ChartOptions<'scatter'> = {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
@@ -306,9 +391,116 @@ export default function CorrelationChart() {
       },
     }
 
+    // Trend view (time-series with dual Y-axes)
+    // Collect all unique dates from all stocks
+    const allDates = Array.from(
+      new Set(
+        compareData.results.flatMap(result => 
+          result.data.map(point => point.date)
+        )
+      )
+    ).sort()
+
+    // Create datasets for trend view
+    const trendDatasets: any[] = []
+    
+    // Add price lines for each stock
+    compareData.results.forEach((result, idx) => {
+      const priceData = allDates.map(date => {
+        const point = result.data.find(p => p.date === date)
+        if (!point) return null
+        return isPriceMetricX ? point.x : point.y
+      })
+      
+      trendDatasets.push({
+        label: `${result.ticker} Price`,
+        data: priceData,
+        borderColor: PRICE_COLORS[idx % PRICE_COLORS.length].line,
+        backgroundColor: PRICE_COLORS[idx % PRICE_COLORS.length].fill,
+        yAxisID: 'y-left',
+        tension: 0.1,
+        fill: false,
+      })
+    })
+    
+    // Add metric lines for each stock
+    compareData.results.forEach((result, idx) => {
+      const metricData = allDates.map(date => {
+        const point = result.data.find(p => p.date === date)
+        if (!point) return null
+        return isPriceMetricX ? point.y : point.x
+      })
+      
+      trendDatasets.push({
+        label: `${result.ticker} ${otherMetric.replace(/_/g, ' ')}`,
+        data: metricData,
+        borderColor: METRIC_COLORS[idx % METRIC_COLORS.length].line,
+        backgroundColor: METRIC_COLORS[idx % METRIC_COLORS.length].fill,
+        yAxisID: 'y-right',
+        tension: 0.1,
+        fill: false,
+      })
+    })
+
+    const trendChartData = {
+      labels: allDates,
+      datasets: trendDatasets,
+    }
+
+    const trendOptions: ChartOptions<'line'> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index' as const,
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top' as const,
+        },
+        tooltip: {
+          callbacks: {
+            title: (context) => {
+              return `Date: ${context[0].label}`
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Date',
+          },
+        },
+        'y-left': {
+          type: 'linear' as const,
+          position: 'left' as const,
+          title: {
+            display: true,
+            text: 'Price ($)',
+          },
+        },
+        'y-right': {
+          type: 'linear' as const,
+          position: 'right' as const,
+          title: {
+            display: true,
+            text: otherMetric.replace(/_/g, ' ').toUpperCase(),
+          },
+          grid: {
+            drawOnChartArea: false,
+          },
+        },
+      },
+    }
+
     return (
       <div className="w-full">
         {renderSearchInterface()}
+        
+        {renderViewToggle()}
         
         <div className="mb-4">
           <h2 className="text-2xl font-bold">Multi-Stock Comparison</h2>
@@ -338,9 +530,13 @@ export default function CorrelationChart() {
           <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg">
             <div className="text-lg text-gray-600">Updating chart...</div>
           </div>
+        ) : viewMode === 'correlation' ? (
+          <div className="h-96">
+            <Scatter data={correlationChartData} options={correlationOptions} />
+          </div>
         ) : (
           <div className="h-96">
-            <Scatter data={chartData} options={options} />
+            <Line data={trendChartData} options={trendOptions} />
           </div>
         )}
       </div>
@@ -349,7 +545,13 @@ export default function CorrelationChart() {
 
   // Render single-stock view (backwards compatible)
   if (data) {
-    const chartData = {
+    // Prepare data for trend view
+    const isPriceMetricX = data.metricX === 'price'
+    const priceMetric = isPriceMetricX ? data.metricX : data.metricY
+    const otherMetric = isPriceMetricX ? data.metricY : data.metricX
+
+    // Correlation view (scatter plot)
+    const correlationChartData = {
       datasets: [
         {
           label: `${data.ticker}: ${data.metricX} vs ${data.metricY}`,
@@ -363,7 +565,7 @@ export default function CorrelationChart() {
       ],
     }
 
-    const options: ChartOptions<'scatter'> = {
+    const correlationOptions: ChartOptions<'scatter'> = {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
@@ -396,9 +598,89 @@ export default function CorrelationChart() {
       },
     }
 
+    // Trend view (time-series with dual Y-axes)
+    const dates = data.data.map(point => point.date)
+    const priceData = data.data.map(point => isPriceMetricX ? point.x : point.y)
+    const metricData = data.data.map(point => isPriceMetricX ? point.y : point.x)
+
+    const trendChartData = {
+      labels: dates,
+      datasets: [
+        {
+          label: 'Price',
+          data: priceData,
+          borderColor: 'rgba(59, 130, 246, 1)',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          yAxisID: 'y-left',
+          tension: 0.1,
+          fill: false,
+        },
+        {
+          label: otherMetric.replace(/_/g, ' ').toUpperCase(),
+          data: metricData,
+          borderColor: 'rgba(34, 197, 94, 1)',
+          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+          yAxisID: 'y-right',
+          tension: 0.1,
+          fill: false,
+        },
+      ],
+    }
+
+    const trendOptions: ChartOptions<'line'> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index' as const,
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top' as const,
+        },
+        tooltip: {
+          callbacks: {
+            title: (context) => {
+              return `Date: ${context[0].label}`
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Date',
+          },
+        },
+        'y-left': {
+          type: 'linear' as const,
+          position: 'left' as const,
+          title: {
+            display: true,
+            text: 'Price ($)',
+          },
+        },
+        'y-right': {
+          type: 'linear' as const,
+          position: 'right' as const,
+          title: {
+            display: true,
+            text: otherMetric.replace(/_/g, ' ').toUpperCase(),
+          },
+          grid: {
+            drawOnChartArea: false,
+          },
+        },
+      },
+    }
+
     return (
       <div className="w-full">
         {renderSearchInterface()}
+        
+        {renderViewToggle()}
         
         <div className="mb-4">
           <h2 className="text-2xl font-bold">{data.ticker} Alternative Data Analysis</h2>
@@ -418,9 +700,13 @@ export default function CorrelationChart() {
           <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg">
             <div className="text-lg text-gray-600">Updating chart...</div>
           </div>
+        ) : viewMode === 'correlation' ? (
+          <div className="h-96">
+            <Scatter data={correlationChartData} options={correlationOptions} />
+          </div>
         ) : (
           <div className="h-96">
-            <Scatter data={chartData} options={options} />
+            <Line data={trendChartData} options={trendOptions} />
           </div>
         )}
       </div>
