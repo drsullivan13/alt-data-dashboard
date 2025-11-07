@@ -11,7 +11,7 @@ import {
   Legend,
   ChartOptions,
 } from 'chart.js'
-import type { ParsedQuery, ParseQueryResponse } from '@/types/query'
+import type { ParsedQuery, ParseQueryResponse, CompareResponse, CompareResult } from '@/types/query'
 
 // Register Chart.js components
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend)
@@ -25,15 +25,23 @@ interface CorrelationData {
   data: Array<{ date: string; x: number; y: number }>
 }
 
+// Chart colors for multi-stock comparison
+const CHART_COLORS = [
+  { bg: 'rgba(59, 130, 246, 0.5)', border: 'rgba(59, 130, 246, 1)' },    // Blue
+  { bg: 'rgba(239, 68, 68, 0.5)', border: 'rgba(239, 68, 68, 1)' },      // Red
+  { bg: 'rgba(34, 197, 94, 0.5)', border: 'rgba(34, 197, 94, 1)' },      // Green
+]
+
 const EXAMPLE_QUERIES = [
   'Show correlation between job postings and price for AAPL',
-  'Compare Reddit sentiment vs stock price for TSLA',
-  'Does Twitter engagement predict NVDA stock movement?',
+  'Compare TSLA vs NVDA Reddit sentiment',
+  'Compare AAPL, MSFT, and GOOGL job postings vs price',
   'Show me employment signals vs price for META since 2024'
 ]
 
 export default function CorrelationChart() {
   const [data, setData] = useState<CorrelationData | null>(null)
+  const [compareData, setCompareData] = useState<CompareResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -45,21 +53,63 @@ export default function CorrelationChart() {
     try {
       setLoading(true)
       setError(null)
+      setCompareData(null) // Clear compare data when fetching single stock
       
-      const response = await fetch('/api/correlation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params)
-      })
+      // Check if this is a multi-stock comparison
+      const isMultiStock = params.tickers && params.tickers.length > 1
+      
+      if (isMultiStock) {
+        // Use compare API for multiple stocks
+        const response = await fetch('/api/compare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tickers: params.tickers,
+            metricX: params.metricX,
+            metricY: params.metricY,
+            startDate: params.startDate,
+            endDate: params.endDate
+          })
+        })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch correlation data')
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch comparison data')
+        }
+
+        const result: CompareResponse = await response.json()
+        setData(null) // Clear single stock data
+        setCompareData(result)
+        setCurrentQuery(params)
+      } else {
+        // Use existing correlation API for single stock (backwards compatible)
+        const ticker = params.ticker || (params.tickers && params.tickers[0])
+        if (!ticker) {
+          throw new Error('No ticker specified')
+        }
+        
+        const response = await fetch('/api/correlation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticker,
+            metricX: params.metricX,
+            metricY: params.metricY,
+            startDate: params.startDate,
+            endDate: params.endDate
+          })
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch correlation data')
+        }
+
+        const result = await response.json()
+        setData(result)
+        setCompareData(null) // Clear compare data
+        setCurrentQuery(params)
       }
-
-      const result = await response.json()
-      setData(result)
-      setCurrentQuery(params)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
@@ -146,6 +196,11 @@ export default function CorrelationChart() {
         </button>
       </form>
 
+      {/* Hint text */}
+      <div className="text-sm text-gray-500">
+        💡 Compare up to 3 stocks at once for best readability
+      </div>
+
       {/* Example queries */}
       <div className="flex flex-wrap gap-2">
         <span className="text-sm text-gray-600 font-medium">Try:</span>
@@ -164,7 +219,8 @@ export default function CorrelationChart() {
       {/* Current query display */}
       {currentQuery && (
         <div className="text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg">
-          <span className="font-medium">Current query:</span> {currentQuery.ticker} | {' '}
+          <span className="font-medium">Current query:</span>{' '}
+          {currentQuery.ticker || (currentQuery.tickers && currentQuery.tickers.join(', '))} | {' '}
           {currentQuery.metricX} vs {currentQuery.metricY}
           {currentQuery.startDate && ` | Since ${currentQuery.startDate}`}
         </div>
@@ -180,7 +236,7 @@ export default function CorrelationChart() {
     </div>
   )
 
-  if (loading && !data) {
+  if (loading && !data && !compareData) {
     return (
       <div className="w-full">
         {renderSearchInterface()}
@@ -191,7 +247,7 @@ export default function CorrelationChart() {
     )
   }
 
-  if (!data) {
+  if (!data && !compareData) {
     return (
       <div className="w-full">
         {renderSearchInterface()}
@@ -202,80 +258,174 @@ export default function CorrelationChart() {
     )
   }
 
-  const chartData = {
-    datasets: [
-      {
-        label: `${data.ticker}: ${data.metricX} vs ${data.metricY}`,
-        data: data.data.map(point => ({ x: point.x, y: point.y })),
-        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-        borderColor: 'rgba(59, 130, 246, 1)',
-        borderWidth: 1,
+  // Render multi-stock comparison
+  if (compareData) {
+    const chartData = {
+      datasets: compareData.results.map((result, idx) => ({
+        label: `${result.ticker}: ${compareData.metricX} vs ${compareData.metricY} (r=${result.correlation})`,
+        data: result.data.map(point => ({ x: point.x, y: point.y })),
+        backgroundColor: CHART_COLORS[idx % CHART_COLORS.length].bg,
+        borderColor: CHART_COLORS[idx % CHART_COLORS.length].border,
+        borderWidth: 2,
         pointRadius: 3,
         pointHoverRadius: 5,
-      },
-    ],
-  }
+      })),
+    }
 
-  const options: ChartOptions<'scatter'> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: true,
-        position: 'top',
-      },
-      tooltip: {
-        callbacks: {
-          label: (context) => {
-            const point = data.data[context.dataIndex]
-            return `${point.date}: (${point.x}, ${point.y})`
+    const options: ChartOptions<'scatter'> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const result = compareData.results[context.datasetIndex]
+              const point = result.data[context.dataIndex]
+              return `${result.ticker} - ${point.date}: (${point.x}, ${point.y})`
+            },
           },
         },
       },
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: data.metricX.replace(/_/g, ' ').toUpperCase(),
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: compareData.metricX.replace(/_/g, ' ').toUpperCase(),
+          },
+        },
+        y: {
+          title: {
+            display: true,
+            text: compareData.metricY.replace(/_/g, ' ').toUpperCase(),
+          },
         },
       },
-      y: {
-        title: {
-          display: true,
-          text: data.metricY.replace(/_/g, ' ').toUpperCase(),
-        },
-      },
-    },
+    }
+
+    return (
+      <div className="w-full">
+        {renderSearchInterface()}
+        
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold">Multi-Stock Comparison</h2>
+          <p className="text-gray-600 mt-2">
+            Comparing: <span className="font-semibold">{compareData.results.map(r => r.ticker).join(', ')}</span>
+          </p>
+          <div className="mt-2 space-y-1">
+            {compareData.results.map((result) => {
+              const corrValue = result.correlation
+              const interpretation = 
+                corrValue > 0.7 ? '🟢 Strong positive' :
+                corrValue > 0.3 ? '🟡 Moderate positive' :
+                corrValue > -0.3 ? '⚪ Weak/no' :
+                corrValue > -0.7 ? '🟡 Moderate negative' :
+                '🔴 Strong negative'
+              
+              return (
+                <p key={result.ticker} className="text-sm text-gray-600">
+                  <span className="font-semibold">{result.ticker}:</span> r={result.correlation} ({interpretation} correlation) | {result.dataPoints} data points
+                </p>
+              )
+            })}
+          </div>
+        </div>
+        
+        {loading ? (
+          <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg">
+            <div className="text-lg text-gray-600">Updating chart...</div>
+          </div>
+        ) : (
+          <div className="h-96">
+            <Scatter data={chartData} options={options} />
+          </div>
+        )}
+      </div>
+    )
   }
 
-  return (
-    <div className="w-full">
-      {renderSearchInterface()}
-      
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold">{data.ticker} Alternative Data Analysis</h2>
-        <p className="text-gray-600 mt-2">
-          Correlation: <span className="font-semibold">{data.correlation}</span> | Data Points: {data.dataPoints}
-        </p>
-        <p className="text-sm text-gray-500 mt-1">
-          {data.correlation > 0.7 ? '🟢 Strong positive correlation' :
-           data.correlation > 0.3 ? '🟡 Moderate positive correlation' :
-           data.correlation > -0.3 ? '⚪ Weak/no correlation' :
-           data.correlation > -0.7 ? '🟡 Moderate negative correlation' :
-           '🔴 Strong negative correlation'}
-        </p>
+  // Render single-stock view (backwards compatible)
+  if (data) {
+    const chartData = {
+      datasets: [
+        {
+          label: `${data.ticker}: ${data.metricX} vs ${data.metricY}`,
+          data: data.data.map(point => ({ x: point.x, y: point.y })),
+          backgroundColor: 'rgba(59, 130, 246, 0.5)',
+          borderColor: 'rgba(59, 130, 246, 1)',
+          borderWidth: 1,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+        },
+      ],
+    }
+
+    const options: ChartOptions<'scatter'> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const point = data.data[context.dataIndex]
+              return `${point.date}: (${point.x}, ${point.y})`
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: data.metricX.replace(/_/g, ' ').toUpperCase(),
+          },
+        },
+        y: {
+          title: {
+            display: true,
+            text: data.metricY.replace(/_/g, ' ').toUpperCase(),
+          },
+        },
+      },
+    }
+
+    return (
+      <div className="w-full">
+        {renderSearchInterface()}
+        
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold">{data.ticker} Alternative Data Analysis</h2>
+          <p className="text-gray-600 mt-2">
+            Correlation: <span className="font-semibold">{data.correlation}</span> | Data Points: {data.dataPoints}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            {data.correlation > 0.7 ? '🟢 Strong positive correlation' :
+             data.correlation > 0.3 ? '🟡 Moderate positive correlation' :
+             data.correlation > -0.3 ? '⚪ Weak/no correlation' :
+             data.correlation > -0.7 ? '🟡 Moderate negative correlation' :
+             '🔴 Strong negative correlation'}
+          </p>
+        </div>
+        
+        {loading ? (
+          <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg">
+            <div className="text-lg text-gray-600">Updating chart...</div>
+          </div>
+        ) : (
+          <div className="h-96">
+            <Scatter data={chartData} options={options} />
+          </div>
+        )}
       </div>
-      
-      {loading ? (
-        <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg">
-          <div className="text-lg text-gray-600">Updating chart...</div>
-        </div>
-      ) : (
-        <div className="h-96">
-          <Scatter data={chartData} options={options} />
-        </div>
-      )}
-    </div>
-  )
+    )
+  }
+
+  return null
 }

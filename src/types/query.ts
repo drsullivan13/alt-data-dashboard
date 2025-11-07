@@ -1,6 +1,7 @@
 // types/query.ts
 export interface ParsedQuery {
-  ticker: string
+  ticker?: string // Legacy: single ticker (for backwards compatibility)
+  tickers?: string[] // New: multiple tickers for comparison
   metricX: string
   metricY: string
   startDate?: string
@@ -17,6 +18,30 @@ export interface ParseQueryResponse {
   error?: string
   confidence?: 'high' | 'medium' | 'low'
   suggestions?: string[]
+}
+
+// Multi-stock comparison types
+export interface CompareRequest {
+  tickers: string[]
+  metricX: string
+  metricY: string
+  startDate?: string
+  endDate?: string
+}
+
+export interface CompareResult {
+  ticker: string
+  correlation: number
+  dataPoints: number
+  data: Array<{ date: string; x: number; y: number }>
+}
+
+export interface CompareResponse {
+  success: boolean
+  metricX: string
+  metricY: string
+  results: CompareResult[]
+  error?: string
 }
 
 export const VALID_TICKERS = [
