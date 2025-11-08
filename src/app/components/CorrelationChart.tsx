@@ -407,17 +407,18 @@ export default function CorrelationChart() {
     
     // Add both price and metric lines for each stock (grouped by ticker)
     compareData.results.forEach((result, idx) => {
-      const priceData = allDates.map(date => {
-        const point = result.data.find(p => p.date === date)
-        if (!point) return null
-        return isPriceMetricX ? point.x : point.y
-      })
+      // Create a lookup map for O(1) access instead of O(n) find()
+      const dataByDate = new Map(result.data.map(point => [point.date, point]))
       
-      const metricData = allDates.map(date => {
-        const point = result.data.find(p => p.date === date)
-        if (!point) return null
-        return isPriceMetricX ? point.y : point.x
-      })
+      // Single-pass extraction: O(n) instead of O(n*m + n*m)
+      const priceData: (number | null)[] = []
+      const metricData: (number | null)[] = []
+      
+      for (const date of allDates) {
+        const point = dataByDate.get(date)
+        priceData.push(point ? (isPriceMetricX ? point.x : point.y) : null)
+        metricData.push(point ? (isPriceMetricX ? point.y : point.x) : null)
+      }
       
       // Add price line for this ticker
       trendDatasets.push({
@@ -600,9 +601,16 @@ export default function CorrelationChart() {
     }
 
     // Trend view (time-series with dual Y-axes)
-    const dates = data.data.map(point => point.date)
-    const priceData = data.data.map(point => isPriceMetricX ? point.x : point.y)
-    const metricData = data.data.map(point => isPriceMetricX ? point.y : point.x)
+    // Single-pass extraction: O(n) instead of O(3n)
+    const dates: string[] = []
+    const priceData: number[] = []
+    const metricData: number[] = []
+    
+    for (const point of data.data) {
+      dates.push(point.date)
+      priceData.push(isPriceMetricX ? point.x : point.y)
+      metricData.push(isPriceMetricX ? point.y : point.x)
+    }
 
     const trendChartData = {
       labels: dates,
