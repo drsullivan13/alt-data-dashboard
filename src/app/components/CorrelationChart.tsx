@@ -12,7 +12,7 @@ import {
   Legend,
   ChartOptions,
 } from 'chart.js'
-import type { ParsedQuery, ParseQueryResponse, CompareResponse, CompareResult } from '@/types/query'
+import type { ParsedQuery, ParseQueryResponse, CompareResponse } from '@/types/query'
 import { useAuth } from '@/contexts/AuthContext'
 
 // Register Chart.js components
@@ -197,11 +197,6 @@ export default function CorrelationChart() {
     return metricX === 'price' || metricY === 'price'
   }
 
-  // Get the non-price metric
-  const getNonPriceMetric = (metricX: string, metricY: string): string => {
-    return metricX === 'price' ? metricY : metricX
-  }
-
   // Check if trend view is available
   const isTrendViewAvailable = (): boolean => {
     if (data) {
@@ -348,7 +343,6 @@ export default function CorrelationChart() {
   if (compareData) {
     // Prepare data for trend view
     const isPriceMetricX = compareData.metricX === 'price'
-    const priceMetric = isPriceMetricX ? compareData.metricX : compareData.metricY
     const otherMetric = isPriceMetricX ? compareData.metricY : compareData.metricX
 
     // Correlation view (scatter plot)
@@ -555,7 +549,6 @@ export default function CorrelationChart() {
   if (data) {
     // Prepare data for trend view
     const isPriceMetricX = data.metricX === 'price'
-    const priceMetric = isPriceMetricX ? data.metricX : data.metricY
     const otherMetric = isPriceMetricX ? data.metricY : data.metricX
 
     // Correlation view (scatter plot)
