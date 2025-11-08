@@ -1,7 +1,0 @@
-{
-  "deploymentProtection": {
-    "publicRoutes": [
-      "/api/notify-admin"
-    ]
-  }
-}
