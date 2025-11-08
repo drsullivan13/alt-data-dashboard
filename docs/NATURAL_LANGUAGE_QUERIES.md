@@ -207,9 +207,9 @@ Fetches correlation data for multiple stocks in parallel.
 ## Environment Variables
 Required in `.env.local`:
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_API_KEY=your_anthropic_key
 NEXT_PUBLIC_SUPABASE_URL=https://...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 ## Prompt Engineering

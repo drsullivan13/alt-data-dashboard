@@ -13,6 +13,7 @@ import {
   ChartOptions,
 } from 'chart.js'
 import type { ParsedQuery, ParseQueryResponse, CompareResponse, CompareResult } from '@/types/query'
+import { useAuth } from '@/contexts/AuthContext'
 
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
@@ -54,6 +55,7 @@ const EXAMPLE_QUERIES = [
 ]
 
 export default function CorrelationChart() {
+  const { isApproved } = useAuth()
   const [data, setData] = useState<CorrelationData | null>(null)
   const [compareData, setCompareData] = useState<CompareResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -215,18 +217,22 @@ export default function CorrelationChart() {
   const renderSearchInterface = () => (
     <div className="mb-6 space-y-4">
       <form onSubmit={handleQuerySubmit} className="flex gap-2">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ask a question in natural language..."
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          disabled={isParsingQuery || loading}
-        />
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={isApproved ? "Ask a question in natural language..." : "Available after account approval"}
+            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${!isApproved ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+            disabled={!isApproved || isParsingQuery || loading}
+            title={!isApproved ? "Available after account approval" : ""}
+          />
+        </div>
         <button
           type="submit"
-          disabled={isParsingQuery || loading || !query.trim()}
+          disabled={!isApproved || isParsingQuery || loading || !query.trim()}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+          title={!isApproved ? "Available after account approval" : ""}
         >
           {isParsingQuery ? 'Analyzing...' : 'Search'}
         </button>
@@ -244,8 +250,9 @@ export default function CorrelationChart() {
           <button
             key={idx}
             onClick={() => handleExampleClick(example)}
-            disabled={isParsingQuery || loading}
-            className="text-xs px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!isApproved || isParsingQuery || loading}
+            className={`text-xs px-3 py-1 rounded-full transition-colors ${!isApproved ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'} disabled:opacity-50 disabled:cursor-not-allowed`}
+            title={!isApproved ? "Available after account approval" : ""}
           >
             {example}
           </button>

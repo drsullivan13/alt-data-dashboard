@@ -2,6 +2,16 @@
 
 A Next.js application for analyzing correlations between alternative data signals (job postings, social media sentiment, employee growth) and stock performance. Built for hedge fund interview demonstration.
 
+---
+
+## 🚀 Quick Links
+
+**Deploy & Auth Setup** → [Complete Setup Guide](./COMPLETE_SETUP_GUIDE.md) - Production deployment  
+**Demo Prep** → `docs/DEMO_CHEAT_SHEET.md` - Interview talking points  
+**Architecture** → `docs/ARCHITECTURE.md` - Technical deep dive
+
+---
+
 ## 🌟 Key Features
 
 ### 📊 Dual Visualization Modes
@@ -37,9 +47,9 @@ bun install  # Recommended (faster)
 ### Environment Variables
 Create a `.env.local` file:
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_API_KEY=your_anthropic_key
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 ### Run Development Server
