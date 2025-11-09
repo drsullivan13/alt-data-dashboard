@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Scatter, Line } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -66,6 +66,7 @@ export default function CorrelationChart() {
   const [query, setQuery] = useState('')
   const [isParsingQuery, setIsParsingQuery] = useState(false)
   const [currentQuery, setCurrentQuery] = useState<ParsedQuery | null>(null)
+  const [pendingQuery, setPendingQuery] = useState<ParsedQuery | null>(null) // Tracks edits before Update is clicked
   const [viewMode, setViewMode] = useState<'correlation' | 'trend'>('correlation')
   
   // Discovery mode state
@@ -79,20 +80,33 @@ export default function CorrelationChart() {
 
   // Editable pills state for search query display
   const [editingField, setEditingField] = useState<string | null>(null) // Format: 'ticker-0', 'metricX', 'metricY'
+  const [isAddingTicker, setIsAddingTicker] = useState(false) // State for adding ticker functionality
 
   // Tooltip state for disabled Trend button
   const [showTrendTooltip, setShowTrendTooltip] = useState(false)
 
+  // AbortController to cancel in-flight requests
+  const abortControllerRef = useRef<AbortController | null>(null)
+
   // Fetch correlation data based on current query parameters
   const fetchCorrelationData = async (params: ParsedQuery) => {
     try {
+      // Cancel any in-flight request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+
+      // Create new abort controller for this request
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
+
       setLoading(true)
       setError(null)
       setCompareData(null) // Clear compare data when fetching single stock
-      
+
       // Check if this is a multi-stock comparison
       const isMultiStock = params.tickers && params.tickers.length > 1
-      
+
       if (isMultiStock) {
         // Use compare API for multiple stocks
         const response = await fetch('/api/compare', {
@@ -104,7 +118,8 @@ export default function CorrelationChart() {
             metricY: params.metricY,
             startDate: params.startDate,
             endDate: params.endDate
-          })
+          }),
+          signal: abortController.signal
         })
 
         if (!response.ok) {
@@ -113,16 +128,28 @@ export default function CorrelationChart() {
         }
 
         const result: CompareResponse = await response.json()
-        setData(null) // Clear single stock data
-        setCompareData(result)
-        setCurrentQuery(params)
+
+        // Only update state if this request wasn't aborted
+        if (!abortController.signal.aborted) {
+          setData(null) // Clear single stock data
+          setCompareData(result)
+          // Normalize query to only use tickers array
+          const normalizedQuery: ParsedQuery = {
+            metricX: params.metricX,
+            metricY: params.metricY,
+            tickers: params.tickers,
+            startDate: params.startDate,
+            endDate: params.endDate
+          }
+          setCurrentQuery(normalizedQuery)
+        }
       } else {
         // Use existing correlation API for single stock (backwards compatible)
         const ticker = params.ticker || (params.tickers && params.tickers[0])
         if (!ticker) {
           throw new Error('No ticker specified')
         }
-        
+
         const response = await fetch('/api/correlation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -132,7 +159,8 @@ export default function CorrelationChart() {
             metricY: params.metricY,
             startDate: params.startDate,
             endDate: params.endDate
-          })
+          }),
+          signal: abortController.signal
         })
 
         if (!response.ok) {
@@ -141,11 +169,27 @@ export default function CorrelationChart() {
         }
 
         const result = await response.json()
-        setData(result)
-        setCompareData(null) // Clear compare data
-        setCurrentQuery(params)
+
+        // Only update state if this request wasn't aborted
+        if (!abortController.signal.aborted) {
+          setData(result)
+          setCompareData(null) // Clear compare data
+          // Normalize query to use tickers array even for single stock
+          const normalizedQuery: ParsedQuery = {
+            metricX: params.metricX,
+            metricY: params.metricY,
+            tickers: params.tickers || (params.ticker ? [params.ticker] : []),
+            startDate: params.startDate,
+            endDate: params.endDate
+          }
+          setCurrentQuery(normalizedQuery)
+        }
       }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') {
+        return
+      }
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
@@ -170,7 +214,8 @@ export default function CorrelationChart() {
       setError(null)
       setShowAllResults(false)
       setSelectedResultIndex(0)
-      
+      setPendingQuery(null) // Clear any pending edits when entering discovery mode
+
       // Use the current ticker from the active query, or fall back to selectedTicker
       const tickerToDiscover = currentQuery?.ticker 
         || (currentQuery?.tickers && currentQuery.tickers[0]) 
@@ -208,10 +253,11 @@ export default function CorrelationChart() {
         data: result.topResult.data
       })
       setCompareData(null)
+      // Normalize to use tickers array
       setCurrentQuery({
-        ticker: result.ticker,
         metricX: result.topResult.metric,
         metricY: 'price',
+        tickers: [result.ticker],
         startDate: currentQuery?.startDate,
         endDate: currentQuery?.endDate
       })
@@ -253,10 +299,11 @@ export default function CorrelationChart() {
       const correlationData = await response.json()
       setData(correlationData)
       setCompareData(null)
+      // Normalize to use tickers array
       setCurrentQuery({
-        ticker: selectedTicker,
         metricX: result.metric,
         metricY: 'price',
+        tickers: [selectedTicker],
         startDate: currentQuery?.startDate,
         endDate: currentQuery?.endDate
       })
@@ -304,10 +351,11 @@ export default function CorrelationChart() {
         dataPoints: result.topResult.data.length,
         data: result.topResult.data
       })
+      // Normalize to use tickers array
       setCurrentQuery({
-        ticker: result.ticker,
         metricX: result.topResult.metric,
         metricY: 'price',
+        tickers: [result.ticker],
         startDate: currentQuery?.startDate,
         endDate: currentQuery?.endDate
       })
@@ -329,53 +377,148 @@ export default function CorrelationChart() {
   }
 
   // Handle ticker change in editable pill
-  const handlePillTickerChange = async (index: number, newTicker: string) => {
-    if (!currentQuery) return
+  const handlePillTickerChange = (index: number, newTicker: string) => {
+    const activeQuery = pendingQuery || currentQuery
+    if (!activeQuery) return
 
     setEditingField(null)
 
     // Update the ticker at the specified index
-    let updatedQuery: ParsedQuery
-    if (currentQuery.tickers && currentQuery.tickers.length > 1) {
-      const newTickers = [...currentQuery.tickers]
-      newTickers[index] = newTicker
-      updatedQuery = { ...currentQuery, tickers: newTickers }
-    } else {
-      updatedQuery = { ...currentQuery, ticker: newTicker, tickers: [newTicker] }
+    const currentTickers = activeQuery.tickers || (activeQuery.ticker ? [activeQuery.ticker] : [])
+    const newTickers = [...currentTickers]
+    newTickers[index] = newTicker
+
+    // Create updated query and set as pending
+    const updatedQuery: ParsedQuery = {
+      metricX: activeQuery.metricX,
+      metricY: activeQuery.metricY,
+      tickers: newTickers,
+      startDate: activeQuery.startDate,
+      endDate: activeQuery.endDate
     }
 
-    // Re-fetch data with updated query
-    await fetchCorrelationData(updatedQuery)
+    setPendingQuery(updatedQuery)
   }
 
   // Handle metricX change in editable pill
-  const handlePillMetricXChange = async (newMetric: string) => {
-    if (!currentQuery) return
+  const handlePillMetricXChange = (newMetric: string) => {
+    const activeQuery = pendingQuery || currentQuery
+    if (!activeQuery) return
 
     setEditingField(null)
 
+    // Get current tickers
+    const currentTickers = activeQuery.tickers || (activeQuery.ticker ? [activeQuery.ticker] : [])
+
+    // Create updated query and set as pending
     const updatedQuery: ParsedQuery = {
-      ...currentQuery,
-      metricX: newMetric
+      metricX: newMetric,
+      metricY: activeQuery.metricY,
+      tickers: currentTickers,
+      startDate: activeQuery.startDate,
+      endDate: activeQuery.endDate
     }
 
-    // Re-fetch data with updated query
-    await fetchCorrelationData(updatedQuery)
+    setPendingQuery(updatedQuery)
   }
 
   // Handle metricY change in editable pill
-  const handlePillMetricYChange = async (newMetric: string) => {
-    if (!currentQuery) return
+  const handlePillMetricYChange = (newMetric: string) => {
+    const activeQuery = pendingQuery || currentQuery
+    if (!activeQuery) return
 
     setEditingField(null)
 
+    // Get current tickers
+    const currentTickers = activeQuery.tickers || (activeQuery.ticker ? [activeQuery.ticker] : [])
+
+    // Create updated query and set as pending
     const updatedQuery: ParsedQuery = {
-      ...currentQuery,
-      metricY: newMetric
+      metricX: activeQuery.metricX,
+      metricY: newMetric,
+      tickers: currentTickers,
+      startDate: activeQuery.startDate,
+      endDate: activeQuery.endDate
     }
 
-    // Re-fetch data with updated query
-    await fetchCorrelationData(updatedQuery)
+    setPendingQuery(updatedQuery)
+  }
+
+  // Handle Update button click - fetches data with pending changes
+  const handleUpdateQuery = async () => {
+    if (!pendingQuery) return
+
+    // Fetch data with the pending query
+    await fetchCorrelationData(pendingQuery)
+
+    // Clear pending state since it's now the current query
+    setPendingQuery(null)
+  }
+
+  // Handle removing a ticker from the query
+  const handleRemoveTicker = (index: number) => {
+    const activeQuery = pendingQuery || currentQuery
+    if (!activeQuery) return
+
+    const tickers = activeQuery.tickers || (activeQuery.ticker ? [activeQuery.ticker] : [])
+
+    // Don't allow removing if only one ticker
+    if (tickers.length <= 1) {
+      // If last ticker, clear everything
+      setCurrentQuery(null)
+      setPendingQuery(null)
+      setQuery('')
+      setData(null)
+      setCompareData(null)
+      return
+    }
+
+    // Remove the ticker at the specified index
+    const newTickers = tickers.filter((_, i) => i !== index)
+
+    // Create updated query and set as pending
+    const updatedQuery: ParsedQuery = {
+      metricX: activeQuery.metricX,
+      metricY: activeQuery.metricY,
+      tickers: newTickers,
+      startDate: activeQuery.startDate,
+      endDate: activeQuery.endDate
+    }
+
+    setPendingQuery(updatedQuery)
+  }
+
+  // Handle adding a new ticker to the query
+  const handleAddTicker = (newTicker: string) => {
+    const activeQuery = pendingQuery || currentQuery
+    if (!newTicker || !activeQuery) return
+
+    setIsAddingTicker(false)
+
+    const currentTickers = activeQuery.tickers || (activeQuery.ticker ? [activeQuery.ticker] : [])
+
+    // Don't add if already exists
+    if (currentTickers.includes(newTicker)) {
+      return
+    }
+
+    // Don't add if already at max (3)
+    if (currentTickers.length >= 3) {
+      return
+    }
+
+    const updatedTickers = [...currentTickers, newTicker]
+
+    // Create updated query and set as pending
+    const updatedQuery: ParsedQuery = {
+      metricX: activeQuery.metricX,
+      metricY: activeQuery.metricY,
+      tickers: updatedTickers,
+      startDate: activeQuery.startDate,
+      endDate: activeQuery.endDate
+    }
+
+    setPendingQuery(updatedQuery)
   }
 
   // Handle natural language query submission
@@ -391,6 +534,7 @@ export default function CorrelationChart() {
       setIsParsingQuery(true)
       setError(null)
       clearDiscoveryMode()
+      setPendingQuery(null) // Clear any pending edits when starting new search
 
       // Parse the query using Anthropic
       const parseResponse = await fetch('/api/parse-query', {
@@ -405,9 +549,18 @@ export default function CorrelationChart() {
         throw new Error(parseResult.error || 'Failed to parse query')
       }
 
-      // Fetch correlation data with parsed parameters
-      await fetchCorrelationData(parseResult.parsed)
-      
+      // Normalize the parsed query to always use tickers array
+      const normalizedQuery: ParsedQuery = {
+        metricX: parseResult.parsed.metricX,
+        metricY: parseResult.parsed.metricY,
+        tickers: parseResult.parsed.tickers || (parseResult.parsed.ticker ? [parseResult.parsed.ticker] : []),
+        startDate: parseResult.parsed.startDate,
+        endDate: parseResult.parsed.endDate
+      }
+
+      // Fetch correlation data with normalized parameters
+      await fetchCorrelationData(normalizedQuery)
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process query')
     } finally {
@@ -482,16 +635,19 @@ export default function CorrelationChart() {
             </div>
           ) : currentQuery ? (
             // Active query display with beautiful pills INSIDE the box
-            <div className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl bg-white shadow-md hover:shadow-lg transition-all flex items-center flex-wrap gap-2">
-              {/* Render ticker pills */}
-              {(() => {
-                const tickers = currentQuery.tickers || (currentQuery.ticker ? [currentQuery.ticker] : [])
-                return tickers.map((ticker, index) => {
+            (() => {
+              const activeQuery = pendingQuery || currentQuery
+              const tickers = activeQuery.tickers || (activeQuery.ticker ? [activeQuery.ticker] : [])
+
+              return (
+                <div className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl bg-white shadow-md hover:shadow-lg transition-all flex items-center flex-wrap gap-2">
+                  {/* Render ticker pills */}
+                  {tickers.map((ticker, index) => {
                   const fieldId = `ticker-${index}`
                   const isEditing = editingField === fieldId
 
                   return (
-                    <div key={fieldId} className="flex items-center gap-1.5">
+                    <div key={ticker} className="flex items-center gap-1.5">
                       {isEditing ? (
                         <select
                           value={ticker}
@@ -505,95 +661,157 @@ export default function CorrelationChart() {
                           ))}
                         </select>
                       ) : (
-                        <button
-                          onClick={() => setEditingField(fieldId)}
-                          className="font-bold text-blue-700 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 px-3 py-1.5 text-sm rounded-full transition-all shadow-sm hover:shadow-md cursor-pointer border border-blue-200 hover:border-blue-400"
-                          title="Click to change ticker"
-                        >
-                          {ticker}
-                        </button>
+                        <div className="relative group">
+                          <button
+                            onClick={() => setEditingField(fieldId)}
+                            className="font-bold text-blue-700 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 px-3 py-1.5 text-sm rounded-full transition-all shadow-sm hover:shadow-md cursor-pointer border border-blue-200 hover:border-blue-400 hover:-translate-y-0.5"
+                            title="Click to change ticker"
+                          >
+                            {ticker}
+                          </button>
+                          {tickers.length > 1 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRemoveTicker(index)
+                              }}
+                              className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-150 flex items-center justify-center text-xs leading-none shadow-md hover:shadow-lg hover:scale-110"
+                              title="Remove ticker"
+                              style={{ transform: 'scale(0.8)', transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(0.8)'}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
                       )}
                       {index < tickers.length - 1 && <span className="text-blue-300 font-bold">•</span>}
                     </div>
                   )
-                })
-              })()}
+                })}
 
-              <span className="text-blue-400 mx-1">•</span>
+                  {/* Add ticker button */}
+                  {tickers.length < 3 && (
+                  <div className="flex items-center gap-1.5">
+                    {isAddingTicker ? (
+                      <select
+                        value=""
+                        onChange={(e) => handleAddTicker(e.target.value)}
+                        onBlur={() => setIsAddingTicker(false)}
+                        autoFocus
+                        className="font-bold text-blue-700 bg-blue-50 border-2 border-blue-400 rounded-full px-3 py-1.5 text-sm outline-none cursor-pointer shadow-sm hover:shadow-md transition-all"
+                      >
+                        <option value="">Add company...</option>
+                        {VALID_TICKERS
+                          .filter(t => !tickers.includes(t))
+                          .map(t => <option key={t} value={t}>{t}</option>)
+                        }
+                      </select>
+                    ) : (
+                      <button
+                        onClick={() => setIsAddingTicker(true)}
+                        className="w-7 h-7 bg-gradient-to-br from-blue-100 to-blue-200 hover:from-blue-200 hover:to-blue-300 text-blue-600 rounded-full flex items-center justify-center font-bold transition-all shadow-sm hover:shadow-md border border-blue-300 hover:border-blue-400 hover:-translate-y-0.5 hover:scale-105 animate-pulse-subtle"
+                        title="Add company"
+                        style={{ animation: 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
+                      >
+                        +
+                      </button>
+                    )}
+                  </div>
+                  )}
 
-              {/* MetricX pill */}
-              {editingField === 'metricX' ? (
-                <select
-                  value={currentQuery.metricX}
-                  onChange={(e) => handlePillMetricXChange(e.target.value)}
-                  className="text-gray-800 font-medium bg-gray-50 border-2 border-gray-400 rounded-full px-3 py-1.5 text-sm outline-none cursor-pointer shadow-sm hover:shadow-md transition-all"
-                  autoFocus
-                  onBlur={() => setEditingField(null)}
-                >
-                  {VALID_METRICS.map((metric) => (
-                    <option key={metric} value={metric}>{formatMetricName(metric)}</option>
-                  ))}
-                </select>
-              ) : (
-                <button
-                  onClick={() => setEditingField('metricX')}
-                  className="text-gray-800 font-medium bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 px-3 py-1.5 text-sm rounded-full transition-all shadow-sm hover:shadow-md cursor-pointer border border-gray-200 hover:border-gray-400"
-                  title="Click to change metric"
-                >
-                  {formatMetricName(currentQuery.metricX)}
-                </button>
-              )}
-
-              <span className="text-gray-400 font-medium text-sm">vs</span>
-
-              {/* MetricY pill */}
-              {editingField === 'metricY' ? (
-                <select
-                  value={currentQuery.metricY}
-                  onChange={(e) => handlePillMetricYChange(e.target.value)}
-                  className="text-gray-800 font-medium bg-gray-50 border-2 border-gray-400 rounded-full px-3 py-1.5 text-sm outline-none cursor-pointer shadow-sm hover:shadow-md transition-all"
-                  autoFocus
-                  onBlur={() => setEditingField(null)}
-                >
-                  {VALID_METRICS.map((metric) => (
-                    <option key={metric} value={metric}>{formatMetricName(metric)}</option>
-                  ))}
-                </select>
-              ) : (
-                <button
-                  onClick={() => setEditingField('metricY')}
-                  className="text-gray-800 font-medium bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 px-3 py-1.5 text-sm rounded-full transition-all shadow-sm hover:shadow-md cursor-pointer border border-gray-200 hover:border-gray-400"
-                  title="Click to change metric"
-                >
-                  {formatMetricName(currentQuery.metricY)}
-                </button>
-              )}
-
-              {/* Date range (if exists) */}
-              {currentQuery.startDate && (
-                <>
                   <span className="text-blue-400 mx-1">•</span>
-                  <span className="text-gray-600 font-medium text-sm bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
-                    Since {currentQuery.startDate}
-                  </span>
-                </>
+
+                  {/* MetricX pill */}
+                  {editingField === 'metricX' ? (
+                    <select
+                      value={activeQuery.metricX}
+                      onChange={(e) => handlePillMetricXChange(e.target.value)}
+                      className="text-gray-800 font-medium bg-gray-50 border-2 border-gray-400 rounded-full px-3 py-1.5 text-sm outline-none cursor-pointer shadow-sm hover:shadow-md transition-all"
+                      autoFocus
+                      onBlur={() => setEditingField(null)}
+                    >
+                      {VALID_METRICS.map((metric) => (
+                        <option key={metric} value={metric}>{formatMetricName(metric)}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <button
+                      onClick={() => setEditingField('metricX')}
+                      className="text-gray-800 font-medium bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 px-3 py-1.5 text-sm rounded-full transition-all shadow-sm hover:shadow-md cursor-pointer border border-gray-200 hover:border-gray-400 hover:-translate-y-0.5"
+                      title="Click to change metric"
+                    >
+                      {formatMetricName(activeQuery.metricX)}
+                    </button>
+                  )}
+
+                  <span className="text-gray-400 font-medium text-sm">vs</span>
+
+                  {/* MetricY pill */}
+                  {editingField === 'metricY' ? (
+                    <select
+                      value={activeQuery.metricY}
+                      onChange={(e) => handlePillMetricYChange(e.target.value)}
+                      className="text-gray-800 font-medium bg-gray-50 border-2 border-gray-400 rounded-full px-3 py-1.5 text-sm outline-none cursor-pointer shadow-sm hover:shadow-md transition-all"
+                      autoFocus
+                      onBlur={() => setEditingField(null)}
+                    >
+                      {VALID_METRICS.map((metric) => (
+                        <option key={metric} value={metric}>{formatMetricName(metric)}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <button
+                      onClick={() => setEditingField('metricY')}
+                      className="text-gray-800 font-medium bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 px-3 py-1.5 text-sm rounded-full transition-all shadow-sm hover:shadow-md cursor-pointer border border-gray-200 hover:border-gray-400 hover:-translate-y-0.5"
+                      title="Click to change metric"
+                    >
+                      {formatMetricName(activeQuery.metricY)}
+                    </button>
+                  )}
+
+                  {/* Date range (if exists) */}
+                  {activeQuery.startDate && (
+                    <>
+                      <span className="text-blue-400 mx-1">•</span>
+                      <span className="text-gray-600 font-medium text-sm bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+                        Since {activeQuery.startDate}
+                      </span>
+                    </>
+                  )}
+
+              {/* Update button - shows when there are pending changes */}
+              {pendingQuery && (
+                <button
+                  onClick={handleUpdateQuery}
+                  disabled={loading}
+                  className="ml-auto px-4 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-semibold rounded-full hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 animate-pulse-subtle"
+                  type="button"
+                  title="Update chart with changes"
+                >
+                  {loading ? 'Updating...' : 'Update'}
+                </button>
               )}
 
               {/* Clear button */}
               <button
                 onClick={() => {
                   setCurrentQuery(null)
+                  setPendingQuery(null)
                   setQuery('')
                   setData(null)
                   setCompareData(null)
                 }}
-                className="ml-auto text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full w-7 h-7 flex items-center justify-center transition-all text-lg font-bold"
+                className={`${pendingQuery ? '' : 'ml-auto'} text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full w-7 h-7 flex items-center justify-center transition-all text-lg font-bold`}
                 type="button"
                 title="New search"
               >
                 ×
               </button>
-            </div>
+                </div>
+              )
+            })()
           ) : (
             // Empty state - show search input
             <input
