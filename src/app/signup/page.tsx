@@ -70,38 +70,41 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full">
-          <div className="bg-white shadow-lg rounded-lg p-8">
+          <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-8 border border-gray-100">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 mb-6 shadow-lg">
                 <svg
-                  className="h-6 w-6 text-green-600"
+                  className="h-8 w-8 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  strokeWidth={3}
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-3xl font-bold text-gray-900 mb-3">
                 Check your email
               </h2>
-              <p className="text-gray-600 mb-6">
-                We&apos;ve sent you a confirmation link to <strong>{email}</strong>
+              <p className="text-gray-600 mb-6 text-base">
+                We&apos;ve sent a confirmation link to<br />
+                <strong className="text-blue-600">{email}</strong>
               </p>
-              <p className="text-sm text-gray-500 mb-6">
-                After confirming your email, your account will be reviewed for approval.
-                You&apos;ll receive another email once approved.
-              </p>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl px-5 py-4 border border-blue-100 mb-6">
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  After confirming your email, your account will be reviewed for approval.
+                  You&apos;ll receive another email once approved.
+                </p>
+              </div>
               <Link
                 href="/login"
-                className="inline-block text-blue-600 hover:text-blue-700 font-medium"
+                className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-semibold transition-all shadow-sm hover:shadow-md"
               >
                 Return to login
               </Link>
@@ -113,25 +116,25 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 flex items-center justify-center p-6">
       <div className="max-w-md w-full">
-        <div className="bg-white shadow-lg rounded-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Create Account
-            </h1>
-            <p className="text-gray-600 mt-2">Sign up for Alternative Data Dashboard</p>
-          </div>
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-gray-900 bg-clip-text text-transparent mb-3 tracking-tight">
+            Financial Data
+          </h1>
+          <p className="text-lg text-gray-600">Create your account</p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-8 border border-gray-100">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-                {error}
+              <div className="bg-red-50 border-2 border-red-100 text-red-700 px-5 py-4 rounded-xl">
+                <p className="text-sm font-medium">{error}</p>
               </div>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
                 Email
               </label>
               <input
@@ -140,13 +143,13 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="you@example.com"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder:text-gray-400 text-base"
+                placeholder="you@company.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
                 Password
               </label>
               <input
@@ -155,14 +158,14 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder:text-gray-400 text-base"
+                placeholder="Create a password"
               />
-              <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
+              <p className="text-xs text-gray-500 mt-2 font-medium">Minimum 6 characters</p>
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
                 Confirm Password
               </label>
               <input
@@ -171,24 +174,34 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-900 placeholder:text-gray-400 text-base"
+                placeholder="Confirm your password"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3.5 px-4 rounded-xl hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all font-semibold shadow-sm hover:shadow-md"
             >
-              {loading ? 'Creating account...' : 'Sign Up'}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Creating account...
+                </span>
+              ) : (
+                'Sign Up'
+              )}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+              <Link href="/login" className="text-blue-600 hover:text-blue-700 font-semibold transition-colors">
                 Sign in
               </Link>
             </p>

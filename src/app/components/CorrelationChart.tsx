@@ -163,11 +163,19 @@ export default function CorrelationChart() {
       setShowAllResults(false)
       setSelectedResultIndex(0)
       
+      // Use the current ticker from the active query, or fall back to selectedTicker
+      const tickerToDiscover = currentQuery?.ticker 
+        || (currentQuery?.tickers && currentQuery.tickers[0]) 
+        || selectedTicker
+      
+      // Update selectedTicker to match current view
+      setSelectedTicker(tickerToDiscover)
+      
       const response = await fetch('/api/discover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ticker: selectedTicker,
+          ticker: tickerToDiscover,
           startDate: currentQuery?.startDate,
           endDate: currentQuery?.endDate
         })
@@ -379,16 +387,16 @@ export default function CorrelationChart() {
 
   // Render search interface
   const renderSearchInterface = () => (
-    <div className="mb-6 space-y-4">
-      <form onSubmit={handleQuerySubmit} className="flex gap-2">
+    <div className="mb-8 space-y-5">
+      <form onSubmit={handleQuerySubmit} className="flex gap-3">
         <div className="flex-1 relative">
           {discoveryMode ? (
-            <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white flex items-center gap-2">
+            <div className="w-full px-5 py-3.5 border-2 border-blue-100 rounded-xl bg-gradient-to-r from-blue-50/50 to-indigo-50/50 flex items-center gap-3 shadow-sm">
               {isEditingTicker ? (
                 <select
                   value={selectedTicker}
                   onChange={(e) => handleTickerChange(e.target.value)}
-                  className="font-medium text-blue-600 bg-transparent border-none outline-none cursor-pointer"
+                  className="font-semibold text-blue-600 bg-transparent border-none outline-none cursor-pointer text-lg"
                   autoFocus
                   onBlur={() => setIsEditingTicker(false)}
                 >
@@ -399,15 +407,15 @@ export default function CorrelationChart() {
               ) : (
                 <button
                   onClick={() => setIsEditingTicker(true)}
-                  className="font-medium text-blue-600 hover:text-blue-700 cursor-pointer"
+                  className="font-semibold text-blue-600 hover:text-blue-700 cursor-pointer px-2 py-1 hover:bg-white/60 rounded-lg transition-all text-lg"
                 >
-                  [{selectedTicker}]
+                  {selectedTicker}
                 </button>
               )}
-              <span className="text-gray-600">{isDiscovering ? 'discovering price predictors...' : 'price predictors'}</span>
+              <span className="text-gray-700 font-medium">{isDiscovering ? 'discovering predictors...' : 'price predictors'}</span>
               <button
                 onClick={clearDiscoveryMode}
-                className="ml-auto text-gray-400 hover:text-gray-600"
+                className="ml-auto text-gray-400 hover:text-gray-600 text-2xl leading-none hover:bg-white/60 rounded-full w-8 h-8 flex items-center justify-center transition-all"
                 type="button"
               >
                 ×
@@ -418,8 +426,8 @@ export default function CorrelationChart() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={isApproved ? "Ask a question in natural language..." : "Available after account approval"}
-              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${!isApproved ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              placeholder={isApproved ? "What would you like to discover?" : "Available after account approval"}
+              className={`w-full px-5 py-3.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-base transition-all text-gray-900 placeholder:text-gray-400 ${!isApproved ? 'bg-gray-50 cursor-not-allowed' : 'bg-white hover:border-gray-300'}`}
               disabled={!isApproved || isParsingQuery || loading}
               title={!isApproved ? "Available after account approval" : ""}
             />
@@ -429,7 +437,7 @@ export default function CorrelationChart() {
           <button
             type="submit"
             disabled={!isApproved || isParsingQuery || loading || !query.trim()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+            className="px-7 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all font-semibold shadow-sm hover:shadow-md"
             title={!isApproved ? "Available after account approval" : ""}
           >
             {isParsingQuery ? 'Analyzing...' : 'Search'}
@@ -439,48 +447,50 @@ export default function CorrelationChart() {
           type="button"
           onClick={handleDiscover}
           disabled={!isApproved || isDiscovering || loading}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+          className="px-7 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all font-semibold shadow-sm hover:shadow-md flex items-center gap-2"
           title={!isApproved ? "Available after account approval" : ""}
         >
-          {isDiscovering ? 'Discovering...' : '🔍 Discover'}
+          <span className="text-xl">✨</span>
+          {isDiscovering ? 'Discovering...' : 'Discover'}
         </button>
       </form>
 
-      {/* Hint text */}
-      <div className="text-sm text-gray-500">
-        💡 Compare up to 3 stocks at once for best readability
-      </div>
-
-      {/* Example queries */}
-      <div className="flex flex-wrap gap-2">
-        <span className="text-sm text-gray-600 font-medium">Try:</span>
-        {EXAMPLE_QUERIES.map((example, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleExampleClick(example)}
-            disabled={!isApproved || isParsingQuery || loading}
-            className={`text-xs px-3 py-1 rounded-full transition-colors ${!isApproved ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'} disabled:opacity-50 disabled:cursor-not-allowed`}
-            title={!isApproved ? "Available after account approval" : ""}
-          >
-            {example}
-          </button>
-        ))}
-      </div>
-
-      {/* Current query display */}
-      {currentQuery && (
-        <div className="text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg">
-          <span className="font-medium">Current query:</span>{' '}
-          {currentQuery.ticker || (currentQuery.tickers && currentQuery.tickers.join(', '))} | {' '}
-          {currentQuery.metricX} vs {currentQuery.metricY}
-          {currentQuery.startDate && ` | Since ${currentQuery.startDate}`}
+      {!discoveryMode && !currentQuery && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-sm text-gray-500 font-medium">Quick start:</span>
+          {EXAMPLE_QUERIES.map((example, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleExampleClick(example)}
+              disabled={!isApproved || isParsingQuery || loading}
+              className={`text-xs px-4 py-2 rounded-lg transition-all font-medium ${!isApproved ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700'} disabled:opacity-50 disabled:cursor-not-allowed shadow-sm`}
+              title={!isApproved ? "Available after account approval" : ""}
+            >
+              {example}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Error display */}
+      {currentQuery && !discoveryMode && (
+        <div className="flex items-center gap-3 text-sm bg-gradient-to-r from-blue-50 to-indigo-50 px-5 py-3 rounded-xl border border-blue-100">
+          <div className="flex items-center gap-2 text-gray-700">
+            <span className="font-semibold text-gray-900">{currentQuery.ticker || (currentQuery.tickers && currentQuery.tickers.join(', '))}</span>
+            <span className="text-gray-400">•</span>
+            <span>{currentQuery.metricX} vs {currentQuery.metricY}</span>
+            {currentQuery.startDate && (
+              <>
+                <span className="text-gray-400">•</span>
+                <span>Since {currentQuery.startDate}</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          <p className="font-medium">Error:</p>
+        <div className="bg-red-50 border-2 border-red-100 text-red-700 px-5 py-4 rounded-xl">
+          <p className="font-semibold mb-1">Error</p>
           <p className="text-sm">{error}</p>
         </div>
       )}
@@ -492,40 +502,37 @@ export default function CorrelationChart() {
     const trendAvailable = isTrendViewAvailable()
     
     return (
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setViewMode('correlation')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            viewMode === 'correlation'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Correlation View
-        </button>
-        <button
-          onClick={() => {
-            if (trendAvailable) {
-              setViewMode('trend')
-            }
-          }}
-          disabled={!trendAvailable}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            viewMode === 'trend'
-              ? 'bg-blue-600 text-white'
-              : trendAvailable
-              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }`}
-          title={!trendAvailable ? 'Trend view requires price as one of the metrics' : ''}
-        >
-          Trend View
-        </button>
-        {!trendAvailable && (
-          <span className="text-sm text-gray-500 self-center ml-2">
-            💡 Trend view requires price as one of the metrics
-          </span>
-        )}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="inline-flex bg-gray-100 rounded-xl p-1 shadow-inner">
+          <button
+            onClick={() => setViewMode('correlation')}
+            className={`px-5 py-2.5 rounded-lg font-semibold transition-all ${
+              viewMode === 'correlation'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Correlation
+          </button>
+          <button
+            onClick={() => {
+              if (trendAvailable) {
+                setViewMode('trend')
+              }
+            }}
+            disabled={!trendAvailable}
+            className={`px-5 py-2.5 rounded-lg font-semibold transition-all ${
+              viewMode === 'trend'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : trendAvailable
+                ? 'text-gray-600 hover:text-gray-900'
+                : 'text-gray-400 cursor-not-allowed'
+            }`}
+            title={!trendAvailable ? 'Trend view requires price as one of the metrics' : ''}
+          >
+            Trend
+          </button>
+        </div>
       </div>
     )
   }
@@ -904,33 +911,38 @@ export default function CorrelationChart() {
         
         {renderViewToggle()}
         
-        <div className={`flex gap-4 ${discoveryMode ? '' : ''}`}>
+        <div className={`flex gap-6 ${discoveryMode ? '' : ''}`}>
           {discoveryMode && (
-            <div className="w-1/4 min-w-[280px]">
-              <div className="bg-white rounded-lg border border-gray-200 p-4 sticky top-4">
-                <h3 className="text-lg font-bold mb-3">🎯 Price Predictors for {selectedTicker}</h3>
-                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+            <div className="w-80 flex-shrink-0">
+              <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl border-2 border-gray-100 p-6 sticky top-4 shadow-lg">
+                <div className="flex items-center gap-2 mb-5">
+                  <span className="text-2xl">🎯</span>
+                  <h3 className="text-xl font-bold text-gray-900">Price Predictors</h3>
+                </div>
+                <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
                   {(showAllResults ? discoveryResults : discoveryResults.slice(0, 5)).map((result, idx) => (
                     <button
                       key={result.metric}
                       onClick={() => handleDiscoveryResultClick(result, idx)}
-                      className={`w-full text-left p-3 rounded-lg border transition-all ${
+                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                         selectedResultIndex === idx
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md scale-[1.02]'
+                          : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm'
                       }`}
                     >
-                      <div className="flex items-start gap-2">
-                        <span className="text-lg">{getStrengthEmoji(result.strength)}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl flex-shrink-0">{getStrengthEmoji(result.strength)}</span>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-900 truncate">
-                            {idx + 1}. {formatMetricName(result.metric)}
+                          <div className="font-bold text-gray-900 truncate text-sm mb-1">
+                            {formatMetricName(result.metric)}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            r = {result.correlation.toFixed(2)}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {getStrengthLabel(result.correlation)}
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-lg font-bold text-blue-600">
+                              {result.correlation.toFixed(3)}
+                            </span>
+                            <span className="text-xs text-gray-500 font-medium">
+                              {getStrengthLabel(result.correlation)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -940,40 +952,55 @@ export default function CorrelationChart() {
                 {discoveryResults.length > 5 && (
                   <button
                     onClick={() => setShowAllResults(!showAllResults)}
-                    className="w-full mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    className="w-full mt-4 px-4 py-2.5 text-sm bg-white border-2 border-gray-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 font-semibold rounded-xl transition-all shadow-sm"
                   >
-                    {showAllResults ? '▲ Show less' : `▼ Show all ${discoveryResults.length} results`}
+                    {showAllResults ? '↑ Show less' : `↓ Show all ${discoveryResults.length} results`}
                   </button>
                 )}
               </div>
             </div>
           )}
           
-          <div className={discoveryMode ? 'flex-1' : 'w-full'}>
-            <div className="mb-4">
-              <h2 className="text-2xl font-bold">{data.ticker} Alternative Data Analysis</h2>
-              <p className="text-gray-600 mt-2">
-                Correlation: <span className="font-semibold">{data.correlation}</span> | Data Points: {data.dataPoints}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">
-                {data.correlation > 0.7 ? '🟢 Strong positive correlation' :
-                 data.correlation > 0.3 ? '🟡 Moderate positive correlation' :
-                 data.correlation > -0.3 ? '⚪ Weak/no correlation' :
-                 data.correlation > -0.7 ? '🟡 Moderate negative correlation' :
-                 '🔴 Strong negative correlation'}
-              </p>
+          <div className={discoveryMode ? 'flex-1 min-w-0' : 'w-full'}>
+            <div className="mb-6 bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-2xl p-6 border border-gray-100">
+              <h2 className="text-3xl font-bold text-gray-900 mb-3">{data.ticker}</h2>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 font-medium">Correlation</span>
+                  <span className="text-2xl font-bold text-blue-600">{data.correlation.toFixed(4)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 font-medium">Data Points</span>
+                  <span className="text-lg font-semibold text-gray-900">{data.dataPoints}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {data.correlation > 0.7 ? <span className="text-lg">🟢</span> :
+                   data.correlation > 0.4 ? <span className="text-lg">🟡</span> :
+                   data.correlation > -0.4 ? <span className="text-lg">⚪</span> :
+                   data.correlation > -0.7 ? <span className="text-lg">🟡</span> :
+                   <span className="text-lg">🔴</span>}
+                  <span className="text-gray-700 font-semibold">
+                    {data.correlation > 0.7 ? 'Strong positive' :
+                     data.correlation > 0.4 ? 'Moderate positive' :
+                     data.correlation > -0.4 ? 'Weak' :
+                     data.correlation > -0.7 ? 'Moderate negative' :
+                     'Strong negative'}
+                  </span>
+                </div>
+              </div>
             </div>
             
             {loading ? (
-              <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg">
-                <div className="text-lg text-gray-600">Updating chart...</div>
+              <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-2xl border-2 border-gray-100">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mb-4"></div>
+                <div className="text-lg font-semibold text-gray-700">Analyzing data...</div>
               </div>
             ) : viewMode === 'correlation' ? (
-              <div className="h-96">
+              <div className="h-96 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
                 <Scatter data={correlationChartData} options={correlationOptions} />
               </div>
             ) : (
-              <div className="h-96">
+              <div className="h-96 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
                 <Line data={trendChartData} options={trendOptions} />
               </div>
             )}

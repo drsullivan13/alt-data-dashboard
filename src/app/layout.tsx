@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Alternative Data Dashboard",
-  description: "Analyze correlations between alternative data signals and stock performance",
+  title: "Financial Data Intelligence",
+  description: "Discover hidden correlations between financial data signals and stock performance",
 };
 
 export default function RootLayout({
