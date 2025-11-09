@@ -16,6 +16,7 @@ import type { ParsedQuery, ParseQueryResponse, CompareResponse, DiscoverResponse
 import { VALID_TICKERS, VALID_METRICS } from '@/types/query'
 import { useAuth } from '@/contexts/AuthContext'
 import { getStrengthEmoji, getStrengthLabel, formatMetricName } from '@/lib/discovery'
+import { getDisplayName } from '@/lib/metricDisplay'
 
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
@@ -51,9 +52,9 @@ const METRIC_COLORS = [
 
 const EXAMPLE_QUERIES = [
   'Show correlation between job postings and price for AAPL',
-  'Compare TSLA vs NVDA Reddit sentiment',
+  'Compare TSLA vs NVDA Sentiment Alpha',
   'Compare AAPL, MSFT, and GOOGL job postings vs price',
-  'Show me employment signals vs price for META since 2024'
+  'Show me Hiring Momentum Score vs price for META since 2024'
 ]
 
 export default function CorrelationChart() {
@@ -741,7 +742,7 @@ export default function CorrelationChart() {
     // Correlation view (scatter plot)
     const correlationChartData = {
       datasets: compareData.results.map((result, idx) => ({
-        label: `${result.ticker}: ${compareData.metricX} vs ${compareData.metricY} (r=${result.correlation})`,
+        label: `${result.ticker}: ${getDisplayName(compareData.metricX)} vs ${getDisplayName(compareData.metricY)} (r=${result.correlation})`,
         data: result.data.map(point => ({ x: point.x, y: point.y })),
         backgroundColor: CHART_COLORS[idx % CHART_COLORS.length].bg,
         borderColor: CHART_COLORS[idx % CHART_COLORS.length].border,
@@ -773,13 +774,13 @@ export default function CorrelationChart() {
         x: {
           title: {
             display: true,
-            text: compareData.metricX.replace(/_/g, ' ').toUpperCase(),
+            text: getDisplayName(compareData.metricX).toUpperCase(),
           },
         },
         y: {
           title: {
             display: true,
-            text: compareData.metricY.replace(/_/g, ' ').toUpperCase(),
+            text: getDisplayName(compareData.metricY).toUpperCase(),
           },
         },
       },
@@ -827,7 +828,7 @@ export default function CorrelationChart() {
       
       // Add metric line for this ticker (immediately after price)
       trendDatasets.push({
-        label: `${result.ticker} ${otherMetric.replace(/_/g, ' ')}`,
+        label: `${result.ticker} ${getDisplayName(otherMetric)}`,
         data: metricData,
         borderColor: METRIC_COLORS[idx % METRIC_COLORS.length].line,
         backgroundColor: METRIC_COLORS[idx % METRIC_COLORS.length].fill,
@@ -883,7 +884,7 @@ export default function CorrelationChart() {
           position: 'right' as const,
           title: {
             display: true,
-            text: otherMetric.replace(/_/g, ' ').toUpperCase(),
+            text: getDisplayName(otherMetric).toUpperCase(),
           },
           grid: {
             drawOnChartArea: false,
@@ -953,7 +954,7 @@ export default function CorrelationChart() {
     const correlationChartData = {
       datasets: [
         {
-          label: `${data.ticker}: ${data.metricX} vs ${data.metricY}`,
+          label: `${data.ticker}: ${getDisplayName(data.metricX)} vs ${getDisplayName(data.metricY)}`,
           data: data.data.map(point => ({ x: point.x, y: point.y })),
           backgroundColor: 'rgba(59, 130, 246, 0.5)',
           borderColor: 'rgba(59, 130, 246, 1)',
@@ -985,13 +986,13 @@ export default function CorrelationChart() {
         x: {
           title: {
             display: true,
-            text: data.metricX.replace(/_/g, ' ').toUpperCase(),
+            text: getDisplayName(data.metricX).toUpperCase(),
           },
         },
         y: {
           title: {
             display: true,
-            text: data.metricY.replace(/_/g, ' ').toUpperCase(),
+            text: getDisplayName(data.metricY).toUpperCase(),
           },
         },
       },
@@ -1022,7 +1023,7 @@ export default function CorrelationChart() {
           fill: false,
         },
         {
-          label: otherMetric.replace(/_/g, ' ').toUpperCase(),
+          label: getDisplayName(otherMetric).toUpperCase(),
           data: metricData,
           borderColor: 'rgba(34, 197, 94, 1)',
           backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -1073,7 +1074,7 @@ export default function CorrelationChart() {
           position: 'right' as const,
           title: {
             display: true,
-            text: otherMetric.replace(/_/g, ' ').toUpperCase(),
+            text: getDisplayName(otherMetric).toUpperCase(),
           },
           grid: {
             drawOnChartArea: false,

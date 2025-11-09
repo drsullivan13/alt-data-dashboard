@@ -21,8 +21,8 @@ export function getStrengthLabel(r: number): string {
 }
 
 export function formatMetricName(metric: string): string {
-  return metric
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
+  // Import and use the display name mapping
+  // This now returns obfuscated names like "Social Velocity" instead of "Twitter Mentions"
+  const { getDisplayName } = require('./metricDisplay')
+  return getDisplayName(metric)
 }

@@ -100,39 +100,55 @@ export const METRIC_ALIASES: Record<string, Metric> = {
   'share price': 'price',
   'stock': 'price',
   'price': 'price',
-  
+
   // Job aliases
   'job posts': 'job_posts',
   'job postings': 'job_posts',
   'jobs': 'job_posts',
   'hiring': 'job_posts',
   'employment': 'job_posts',
-  
-  // Reddit aliases
+
+  // Reddit aliases (including obfuscated display names)
   'reddit mentions': 'reddit_mentions',
   'reddit': 'reddit_mentions',
+  'community activity index': 'reddit_mentions',
+  'Community Activity Index': 'reddit_mentions',
   'reddit sentiment': 'reddit_sentiment',
-  
-  // Twitter aliases
+  'sentiment alpha': 'reddit_sentiment',
+  'Sentiment Alpha': 'reddit_sentiment',
+
+  // Twitter aliases (including obfuscated display names)
   'twitter mentions': 'twitter_mentions',
   'twitter': 'twitter_mentions',
+  'social velocity': 'twitter_mentions',
+  'Social Velocity': 'twitter_mentions',
   'twitter followers': 'twitter_followers',
   'twitter engagement': 'twitter_mentions',
-  
-  // Employee aliases
+  'social reach metric': 'twitter_followers',
+  'Social Reach Metric': 'twitter_followers',
+
+  // Employee aliases (including obfuscated display names)
   'employees': 'employees_linkedin',
   'employee count': 'employees_linkedin',
   'headcount': 'employees_linkedin',
-  
-  // AI Score aliases
+  'workforce index': 'employees_linkedin',
+  'Workforce Index': 'employees_linkedin',
+
+  // AI Score aliases (including obfuscated display names)
   'ai score': 'ai_score_overall',
+  'composite signal': 'ai_score_overall',
+  'Composite Signal': 'ai_score_overall',
   'employment score': 'ai_score_employment',
   'ai employment': 'ai_score_employment',
-  
-  // StockTwits aliases
+  'hiring momentum score': 'ai_score_employment',
+  'Hiring Momentum Score': 'ai_score_employment',
+
+  // StockTwits aliases (including obfuscated display names)
   'stocktwits': 'stocktwits_sentiment',
   'stocktwits sentiment': 'stocktwits_sentiment',
-  
+  'investor sentiment index': 'stocktwits_sentiment',
+  'Investor Sentiment Index': 'stocktwits_sentiment',
+
   // News aliases
   'news': 'news_mentions',
   'news mentions': 'news_mentions',
