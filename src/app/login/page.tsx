@@ -59,7 +59,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-gray-900 bg-clip-text text-transparent mb-3 tracking-tight">
-            Financial Data
+            Financial Data Intelligence
           </h1>
           <p className="text-lg text-gray-600">Sign in to continue</p>
         </div>
