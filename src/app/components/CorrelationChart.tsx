@@ -13,6 +13,7 @@ import {
   ChartOptions,
 } from 'chart.js'
 import type { ParsedQuery, ParseQueryResponse, CompareResponse, DiscoverResponse, DiscoveryResult } from '@/types/query'
+import { VALID_TICKERS, VALID_METRICS } from '@/types/query'
 import { useAuth } from '@/contexts/AuthContext'
 import { getStrengthEmoji, getStrengthLabel, formatMetricName } from '@/lib/discovery'
 
@@ -74,6 +75,12 @@ export default function CorrelationChart() {
   const [showAllResults, setShowAllResults] = useState(false)
   const [isEditingTicker, setIsEditingTicker] = useState(false)
   const [selectedResultIndex, setSelectedResultIndex] = useState(0)
+
+  // Editable pills state for search query display
+  const [editingField, setEditingField] = useState<string | null>(null) // Format: 'ticker-0', 'metricX', 'metricY'
+
+  // Tooltip state for disabled Trend button
+  const [showTrendTooltip, setShowTrendTooltip] = useState(false)
 
   // Fetch correlation data based on current query parameters
   const fetchCorrelationData = async (params: ParsedQuery) => {
@@ -320,6 +327,56 @@ export default function CorrelationChart() {
     setSelectedResultIndex(0)
   }
 
+  // Handle ticker change in editable pill
+  const handlePillTickerChange = async (index: number, newTicker: string) => {
+    if (!currentQuery) return
+
+    setEditingField(null)
+
+    // Update the ticker at the specified index
+    let updatedQuery: ParsedQuery
+    if (currentQuery.tickers && currentQuery.tickers.length > 1) {
+      const newTickers = [...currentQuery.tickers]
+      newTickers[index] = newTicker
+      updatedQuery = { ...currentQuery, tickers: newTickers }
+    } else {
+      updatedQuery = { ...currentQuery, ticker: newTicker, tickers: [newTicker] }
+    }
+
+    // Re-fetch data with updated query
+    await fetchCorrelationData(updatedQuery)
+  }
+
+  // Handle metricX change in editable pill
+  const handlePillMetricXChange = async (newMetric: string) => {
+    if (!currentQuery) return
+
+    setEditingField(null)
+
+    const updatedQuery: ParsedQuery = {
+      ...currentQuery,
+      metricX: newMetric
+    }
+
+    // Re-fetch data with updated query
+    await fetchCorrelationData(updatedQuery)
+  }
+
+  // Handle metricY change in editable pill
+  const handlePillMetricYChange = async (newMetric: string) => {
+    if (!currentQuery) return
+
+    setEditingField(null)
+
+    const updatedQuery: ParsedQuery = {
+      ...currentQuery,
+      metricY: newMetric
+    }
+
+    // Re-fetch data with updated query
+    await fetchCorrelationData(updatedQuery)
+  }
+
   // Handle natural language query submission
   const handleQuerySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -391,6 +448,7 @@ export default function CorrelationChart() {
       <form onSubmit={handleQuerySubmit} className="flex gap-3">
         <div className="flex-1 relative">
           {discoveryMode ? (
+            // Discovery mode display
             <div className="w-full px-5 py-3.5 border-2 border-blue-100 rounded-xl bg-gradient-to-r from-blue-50/50 to-indigo-50/50 flex items-center gap-3 shadow-sm">
               {isEditingTicker ? (
                 <select
@@ -400,7 +458,7 @@ export default function CorrelationChart() {
                   autoFocus
                   onBlur={() => setIsEditingTicker(false)}
                 >
-                  {(['AAPL', 'AMZN', 'DELL', 'GOOGL', 'JNJ', 'META', 'MSFT', 'NKE', 'NVDA', 'TSLA', 'UBER', 'V'] as const).map((ticker) => (
+                  {VALID_TICKERS.map((ticker) => (
                     <option key={ticker} value={ticker}>{ticker}</option>
                   ))}
                 </select>
@@ -421,23 +479,138 @@ export default function CorrelationChart() {
                 ×
               </button>
             </div>
+          ) : currentQuery ? (
+            // Active query display with beautiful pills INSIDE the box
+            <div className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl bg-white shadow-md hover:shadow-lg transition-all flex items-center flex-wrap gap-2">
+              {/* Render ticker pills */}
+              {(() => {
+                const tickers = currentQuery.tickers || (currentQuery.ticker ? [currentQuery.ticker] : [])
+                return tickers.map((ticker, index) => {
+                  const fieldId = `ticker-${index}`
+                  const isEditing = editingField === fieldId
+
+                  return (
+                    <div key={fieldId} className="flex items-center gap-1.5">
+                      {isEditing ? (
+                        <select
+                          value={ticker}
+                          onChange={(e) => handlePillTickerChange(index, e.target.value)}
+                          className="font-bold text-blue-700 bg-blue-50 border-2 border-blue-400 rounded-full px-3 py-1.5 text-sm outline-none cursor-pointer shadow-sm hover:shadow-md transition-all"
+                          autoFocus
+                          onBlur={() => setEditingField(null)}
+                        >
+                          {VALID_TICKERS.map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <button
+                          onClick={() => setEditingField(fieldId)}
+                          className="font-bold text-blue-700 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 px-3 py-1.5 text-sm rounded-full transition-all shadow-sm hover:shadow-md cursor-pointer border border-blue-200 hover:border-blue-400"
+                          title="Click to change ticker"
+                        >
+                          {ticker}
+                        </button>
+                      )}
+                      {index < tickers.length - 1 && <span className="text-blue-300 font-bold">•</span>}
+                    </div>
+                  )
+                })
+              })()}
+
+              <span className="text-blue-400 mx-1">•</span>
+
+              {/* MetricX pill */}
+              {editingField === 'metricX' ? (
+                <select
+                  value={currentQuery.metricX}
+                  onChange={(e) => handlePillMetricXChange(e.target.value)}
+                  className="text-gray-800 font-medium bg-gray-50 border-2 border-gray-400 rounded-full px-3 py-1.5 text-sm outline-none cursor-pointer shadow-sm hover:shadow-md transition-all"
+                  autoFocus
+                  onBlur={() => setEditingField(null)}
+                >
+                  {VALID_METRICS.map((metric) => (
+                    <option key={metric} value={metric}>{formatMetricName(metric)}</option>
+                  ))}
+                </select>
+              ) : (
+                <button
+                  onClick={() => setEditingField('metricX')}
+                  className="text-gray-800 font-medium bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 px-3 py-1.5 text-sm rounded-full transition-all shadow-sm hover:shadow-md cursor-pointer border border-gray-200 hover:border-gray-400"
+                  title="Click to change metric"
+                >
+                  {formatMetricName(currentQuery.metricX)}
+                </button>
+              )}
+
+              <span className="text-gray-400 font-medium text-sm">vs</span>
+
+              {/* MetricY pill */}
+              {editingField === 'metricY' ? (
+                <select
+                  value={currentQuery.metricY}
+                  onChange={(e) => handlePillMetricYChange(e.target.value)}
+                  className="text-gray-800 font-medium bg-gray-50 border-2 border-gray-400 rounded-full px-3 py-1.5 text-sm outline-none cursor-pointer shadow-sm hover:shadow-md transition-all"
+                  autoFocus
+                  onBlur={() => setEditingField(null)}
+                >
+                  {VALID_METRICS.map((metric) => (
+                    <option key={metric} value={metric}>{formatMetricName(metric)}</option>
+                  ))}
+                </select>
+              ) : (
+                <button
+                  onClick={() => setEditingField('metricY')}
+                  className="text-gray-800 font-medium bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 px-3 py-1.5 text-sm rounded-full transition-all shadow-sm hover:shadow-md cursor-pointer border border-gray-200 hover:border-gray-400"
+                  title="Click to change metric"
+                >
+                  {formatMetricName(currentQuery.metricY)}
+                </button>
+              )}
+
+              {/* Date range (if exists) */}
+              {currentQuery.startDate && (
+                <>
+                  <span className="text-blue-400 mx-1">•</span>
+                  <span className="text-gray-600 font-medium text-sm bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+                    Since {currentQuery.startDate}
+                  </span>
+                </>
+              )}
+
+              {/* Clear button */}
+              <button
+                onClick={() => {
+                  setCurrentQuery(null)
+                  setQuery('')
+                  setData(null)
+                  setCompareData(null)
+                }}
+                className="ml-auto text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full w-7 h-7 flex items-center justify-center transition-all text-lg font-bold"
+                type="button"
+                title="New search"
+              >
+                ×
+              </button>
+            </div>
           ) : (
+            // Empty state - show search input
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={isApproved ? "What would you like to discover?" : "Available after account approval"}
-              className={`w-full px-5 py-3.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-base transition-all text-gray-900 placeholder:text-gray-400 ${!isApproved ? 'bg-gray-50 cursor-not-allowed' : 'bg-white hover:border-gray-300'}`}
+              className={`w-full px-5 py-3.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-base transition-all text-gray-900 placeholder:text-gray-400 shadow-sm hover:shadow-md ${!isApproved ? 'bg-gray-50 cursor-not-allowed' : 'bg-white hover:border-gray-300'}`}
               disabled={!isApproved || isParsingQuery || loading}
               title={!isApproved ? "Available after account approval" : ""}
             />
           )}
         </div>
-        {!discoveryMode && (
+        {!discoveryMode && !currentQuery && (
           <button
             type="submit"
             disabled={!isApproved || isParsingQuery || loading || !query.trim()}
-            className="px-7 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all font-semibold shadow-sm hover:shadow-md"
+            className="px-7 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all font-semibold shadow-md hover:shadow-lg"
             title={!isApproved ? "Available after account approval" : ""}
           >
             {isParsingQuery ? 'Analyzing...' : 'Search'}
@@ -447,7 +620,7 @@ export default function CorrelationChart() {
           type="button"
           onClick={handleDiscover}
           disabled={!isApproved || isDiscovering || loading}
-          className="px-7 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all font-semibold shadow-sm hover:shadow-md flex items-center gap-2"
+          className="px-7 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all font-semibold shadow-md hover:shadow-lg flex items-center gap-2"
           title={!isApproved ? "Available after account approval" : ""}
         >
           <span className="text-xl">✨</span>
@@ -456,14 +629,14 @@ export default function CorrelationChart() {
       </form>
 
       {!discoveryMode && !currentQuery && (
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-sm text-gray-500 font-medium">Quick start:</span>
+        <div className="flex flex-wrap gap-2.5 items-center">
+          <span className="text-sm text-gray-600 font-semibold tracking-wide">Quick start:</span>
           {EXAMPLE_QUERIES.map((example, idx) => (
             <button
               key={idx}
               onClick={() => handleExampleClick(example)}
               disabled={!isApproved || isParsingQuery || loading}
-              className={`text-xs px-4 py-2 rounded-lg transition-all font-medium ${!isApproved ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700'} disabled:opacity-50 disabled:cursor-not-allowed shadow-sm`}
+              className={`text-xs px-4 py-2.5 rounded-xl transition-all duration-200 font-medium ${!isApproved ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white border border-gray-200/80 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 text-gray-700 hover:text-blue-700 hover:shadow-lg hover:scale-[1.02]'} disabled:opacity-50 disabled:cursor-not-allowed shadow-sm`}
               title={!isApproved ? "Available after account approval" : ""}
             >
               {example}
@@ -472,24 +645,8 @@ export default function CorrelationChart() {
         </div>
       )}
 
-      {currentQuery && !discoveryMode && (
-        <div className="flex items-center gap-3 text-sm bg-gradient-to-r from-blue-50 to-indigo-50 px-5 py-3 rounded-xl border border-blue-100">
-          <div className="flex items-center gap-2 text-gray-700">
-            <span className="font-semibold text-gray-900">{currentQuery.ticker || (currentQuery.tickers && currentQuery.tickers.join(', '))}</span>
-            <span className="text-gray-400">•</span>
-            <span>{currentQuery.metricX} vs {currentQuery.metricY}</span>
-            {currentQuery.startDate && (
-              <>
-                <span className="text-gray-400">•</span>
-                <span>Since {currentQuery.startDate}</span>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
       {error && (
-        <div className="bg-red-50 border-2 border-red-100 text-red-700 px-5 py-4 rounded-xl">
+        <div className="bg-red-50 border-2 border-red-200 text-red-700 px-5 py-4 rounded-xl shadow-sm">
           <p className="font-semibold mb-1">Error</p>
           <p className="text-sm">{error}</p>
         </div>
@@ -500,38 +657,54 @@ export default function CorrelationChart() {
   // Render view toggle buttons
   const renderViewToggle = () => {
     const trendAvailable = isTrendViewAvailable()
-    
+
     return (
-      <div className="flex items-center gap-3 mb-6">
-        <div className="inline-flex bg-gray-100 rounded-xl p-1 shadow-inner">
+      <div className="flex items-center gap-4 mb-6">
+        <div className="inline-flex bg-gradient-to-br from-gray-100 to-gray-50 rounded-xl p-1.5 shadow-lg border border-gray-200/50">
           <button
             onClick={() => setViewMode('correlation')}
-            className={`px-5 py-2.5 rounded-lg font-semibold transition-all ${
+            className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
               viewMode === 'correlation'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-white text-gray-900 shadow-md scale-[1.02]'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-white/40'
             }`}
           >
             Correlation
           </button>
-          <button
-            onClick={() => {
-              if (trendAvailable) {
-                setViewMode('trend')
-              }
-            }}
-            disabled={!trendAvailable}
-            className={`px-5 py-2.5 rounded-lg font-semibold transition-all ${
-              viewMode === 'trend'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : trendAvailable
-                ? 'text-gray-600 hover:text-gray-900'
-                : 'text-gray-400 cursor-not-allowed'
-            }`}
-            title={!trendAvailable ? 'Trend view requires price as one of the metrics' : ''}
-          >
-            Trend
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => {
+                if (trendAvailable) {
+                  setViewMode('trend')
+                }
+              }}
+              onMouseEnter={() => !trendAvailable && setShowTrendTooltip(true)}
+              onMouseLeave={() => setShowTrendTooltip(false)}
+              disabled={!trendAvailable}
+              className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 ${
+                viewMode === 'trend'
+                  ? 'bg-white text-gray-900 shadow-md scale-[1.02]'
+                  : trendAvailable
+                  ? 'text-gray-600 hover:text-gray-900 hover:bg-white/40'
+                  : 'text-gray-300 cursor-not-allowed'
+              }`}
+            >
+              Trend
+            </button>
+            {showTrendTooltip && !trendAvailable && (
+              <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-10 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-xl whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-medium">Trend requires price metric</span>
+                  </div>
+                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -724,41 +897,45 @@ export default function CorrelationChart() {
         {renderSearchInterface()}
         
         {renderViewToggle()}
-        
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold">Multi-Stock Comparison</h2>
-          <p className="text-gray-600 mt-2">
-            Comparing: <span className="font-semibold">{compareData.results.map(r => r.ticker).join(', ')}</span>
+
+        <div className="mb-6 bg-gradient-to-br from-white via-gray-50/40 to-blue-50/40 rounded-2xl p-6 border border-gray-200/60 shadow-lg">
+          <h2 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight">Multi-Stock Comparison</h2>
+          <p className="text-gray-700 mb-4 font-medium">
+            Comparing: <span className="font-bold text-gray-900">{compareData.results.map(r => r.ticker).join(', ')}</span>
           </p>
-          <div className="mt-2 space-y-1">
+          <div className="space-y-2.5">
             {compareData.results.map((result) => {
               const corrValue = result.correlation
-              const interpretation = 
+              const interpretation =
                 corrValue > 0.7 ? '🟢 Strong positive' :
                 corrValue > 0.3 ? '🟡 Moderate positive' :
                 corrValue > -0.3 ? '⚪ Weak/no' :
                 corrValue > -0.7 ? '🟡 Moderate negative' :
                 '🔴 Strong negative'
-              
+
               return (
-                <p key={result.ticker} className="text-sm text-gray-600">
-                  <span className="font-semibold">{result.ticker}:</span> r={result.correlation} ({interpretation} correlation) | {result.dataPoints} data points
-                </p>
+                <div key={result.ticker} className="flex items-center gap-4 text-sm bg-white/60 px-4 py-3 rounded-xl border border-gray-200/60">
+                  <span className="font-bold text-gray-900 text-base">{result.ticker}</span>
+                  <span className="text-blue-600 font-bold tracking-tight">r={result.correlation.toFixed(4)}</span>
+                  <span className="text-gray-600">{interpretation}</span>
+                  <span className="text-gray-500 ml-auto">{result.dataPoints} points</span>
+                </div>
               )
             })}
           </div>
         </div>
-        
+
         {loading ? (
-          <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg">
-            <div className="text-lg text-gray-600">Updating chart...</div>
+          <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-br from-gray-50/50 via-blue-50/20 to-indigo-50/30 rounded-2xl border border-gray-200/60 shadow-lg">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mb-4"></div>
+            <div className="text-lg font-semibold text-gray-700 tracking-tight">Updating chart...</div>
           </div>
         ) : viewMode === 'correlation' ? (
-          <div className="h-96">
+          <div className="h-96 bg-white rounded-2xl border border-gray-200/60 p-6 shadow-xl hover:shadow-2xl transition-shadow duration-300">
             <Scatter data={correlationChartData} options={correlationOptions} />
           </div>
         ) : (
-          <div className="h-96">
+          <div className="h-96 bg-white rounded-2xl border border-gray-200/60 p-6 shadow-xl hover:shadow-2xl transition-shadow duration-300">
             <Line data={trendChartData} options={trendOptions} />
           </div>
         )}
@@ -914,30 +1091,30 @@ export default function CorrelationChart() {
         <div className={`flex gap-6 ${discoveryMode ? '' : ''}`}>
           {discoveryMode && (
             <div className="w-80 flex-shrink-0">
-              <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl border-2 border-gray-100 p-6 sticky top-4 shadow-lg">
-                <div className="flex items-center gap-2 mb-5">
+              <div className="bg-gradient-to-br from-white via-gray-50/30 to-blue-50/20 rounded-2xl border border-gray-200/60 p-6 sticky top-4 shadow-xl">
+                <div className="flex items-center gap-2.5 mb-6">
                   <span className="text-2xl">🎯</span>
-                  <h3 className="text-xl font-bold text-gray-900">Price Predictors</h3>
+                  <h3 className="text-xl font-bold text-gray-900 tracking-tight">Price Predictors</h3>
                 </div>
-                <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+                <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 scrollbar-thumb-rounded-full">
                   {(showAllResults ? discoveryResults : discoveryResults.slice(0, 5)).map((result, idx) => (
                     <button
                       key={result.metric}
                       onClick={() => handleDiscoveryResultClick(result, idx)}
-                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                      className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
                         selectedResultIndex === idx
-                          ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md scale-[1.02]'
-                          : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm'
+                          ? 'border-blue-400 bg-gradient-to-br from-blue-50 via-blue-50/80 to-indigo-50 shadow-lg scale-[1.02] ring-2 ring-blue-200/50'
+                          : 'border-gray-200/80 hover:border-blue-300/60 hover:bg-gradient-to-br hover:from-blue-50/40 hover:to-indigo-50/30 hover:shadow-md hover:scale-[1.01]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-2xl flex-shrink-0">{getStrengthEmoji(result.strength)}</span>
                         <div className="flex-1 min-w-0">
-                          <div className="font-bold text-gray-900 truncate text-sm mb-1">
+                          <div className="font-bold text-gray-900 truncate text-sm mb-1.5 tracking-tight">
                             {formatMetricName(result.metric)}
                           </div>
                           <div className="flex items-baseline gap-2">
-                            <span className="text-lg font-bold text-blue-600">
+                            <span className="text-lg font-bold text-blue-600 tracking-tight">
                               {result.correlation.toFixed(3)}
                             </span>
                             <span className="text-xs text-gray-500 font-medium">
@@ -952,7 +1129,7 @@ export default function CorrelationChart() {
                 {discoveryResults.length > 5 && (
                   <button
                     onClick={() => setShowAllResults(!showAllResults)}
-                    className="w-full mt-4 px-4 py-2.5 text-sm bg-white border-2 border-gray-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 font-semibold rounded-xl transition-all shadow-sm"
+                    className="w-full mt-4 px-4 py-2.5 text-sm bg-white border border-gray-200/80 text-blue-600 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 font-semibold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
                   >
                     {showAllResults ? '↑ Show less' : `↓ Show all ${discoveryResults.length} results`}
                   </button>
@@ -962,24 +1139,24 @@ export default function CorrelationChart() {
           )}
           
           <div className={discoveryMode ? 'flex-1 min-w-0' : 'w-full'}>
-            <div className="mb-6 bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-2xl p-6 border border-gray-100">
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">{data.ticker}</h2>
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 font-medium">Correlation</span>
-                  <span className="text-2xl font-bold text-blue-600">{data.correlation.toFixed(4)}</span>
+            <div className="mb-6 bg-gradient-to-br from-white via-gray-50/40 to-blue-50/40 rounded-2xl p-6 border border-gray-200/60 shadow-lg">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">{data.ticker}</h2>
+              <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-gray-600 font-medium tracking-wide uppercase text-xs">Correlation</span>
+                  <span className="text-2xl font-bold text-blue-600 tracking-tight">{data.correlation.toFixed(4)}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 font-medium">Data Points</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-gray-600 font-medium tracking-wide uppercase text-xs">Data Points</span>
                   <span className="text-lg font-semibold text-gray-900">{data.dataPoints}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   {data.correlation > 0.7 ? <span className="text-lg">🟢</span> :
                    data.correlation > 0.4 ? <span className="text-lg">🟡</span> :
                    data.correlation > -0.4 ? <span className="text-lg">⚪</span> :
                    data.correlation > -0.7 ? <span className="text-lg">🟡</span> :
                    <span className="text-lg">🔴</span>}
-                  <span className="text-gray-700 font-semibold">
+                  <span className="text-gray-800 font-semibold">
                     {data.correlation > 0.7 ? 'Strong positive' :
                      data.correlation > 0.4 ? 'Moderate positive' :
                      data.correlation > -0.4 ? 'Weak' :
@@ -991,16 +1168,16 @@ export default function CorrelationChart() {
             </div>
             
             {loading ? (
-              <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-2xl border-2 border-gray-100">
+              <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-br from-gray-50/50 via-blue-50/20 to-indigo-50/30 rounded-2xl border border-gray-200/60 shadow-lg">
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mb-4"></div>
-                <div className="text-lg font-semibold text-gray-700">Analyzing data...</div>
+                <div className="text-lg font-semibold text-gray-700 tracking-tight">Analyzing data...</div>
               </div>
             ) : viewMode === 'correlation' ? (
-              <div className="h-96 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+              <div className="h-96 bg-white rounded-2xl border border-gray-200/60 p-6 shadow-xl hover:shadow-2xl transition-shadow duration-300">
                 <Scatter data={correlationChartData} options={correlationOptions} />
               </div>
             ) : (
-              <div className="h-96 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+              <div className="h-96 bg-white rounded-2xl border border-gray-200/60 p-6 shadow-xl hover:shadow-2xl transition-shadow duration-300">
                 <Line data={trendChartData} options={trendOptions} />
               </div>
             )}
