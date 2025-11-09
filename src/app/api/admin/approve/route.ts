@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
 
   const { error } = await supabase
     .from('user_profiles')
-    .update({ 
-      approved: true, 
-      updated_at: new Date().toISOString() 
+    .update({
+      approved: true,
+      updated_at: new Date().toISOString()
     })
     .eq('id', userId)
 
@@ -37,6 +37,41 @@ export async function GET(request: NextRequest) {
   }
 
   console.log(`✅ User ${userId} approved and can now access all features`)
+
+  // Get user email to send approval confirmation
+  const { data: userData, error: userError } = await supabase
+    .from('user_profiles')
+    .select('email')
+    .eq('id', userId)
+    .single()
+
+  if (!userError && userData) {
+    // Call edge function to send approval email to user
+    try {
+      const edgeFunctionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-user-approved-email`
+
+      const emailResponse = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+        },
+        body: JSON.stringify({
+          userEmail: userData.email,
+          userId: userId
+        })
+      })
+
+      if (emailResponse.ok) {
+        console.log(`📧 Approval email sent to ${userData.email}`)
+      } else {
+        console.error('Failed to send approval email:', await emailResponse.text())
+      }
+    } catch (emailError) {
+      console.error('Error sending approval email:', emailError)
+      // Don't fail the approval if email fails
+    }
+  }
 
   return new NextResponse(`
     <!DOCTYPE html>
