@@ -44,6 +44,34 @@ export interface CompareResponse {
   error?: string
 }
 
+// Discovery types
+export interface DiscoveryResult {
+  metric: string
+  correlation: number
+  dataPoints: number
+  strength: 'strong' | 'moderate' | 'weak'
+}
+
+export interface DiscoveryTopResult {
+  metric: string
+  correlation: number
+  data: Array<{ date: string; x: number; y: number }>
+}
+
+export interface DiscoverRequest {
+  ticker: string
+  startDate?: string
+  endDate?: string
+}
+
+export interface DiscoverResponse {
+  success: boolean
+  ticker: string
+  results: DiscoveryResult[]
+  topResult: DiscoveryTopResult
+  error?: string
+}
+
 export const VALID_TICKERS = [
   'AAPL', 'AMZN', 'DELL', 'GOOGL', 'JNJ', 'META', 
   'MSFT', 'NKE', 'NVDA', 'TSLA', 'UBER', 'V'

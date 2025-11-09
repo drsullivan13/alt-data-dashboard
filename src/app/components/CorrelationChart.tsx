@@ -12,8 +12,9 @@ import {
   Legend,
   ChartOptions,
 } from 'chart.js'
-import type { ParsedQuery, ParseQueryResponse, CompareResponse } from '@/types/query'
+import type { ParsedQuery, ParseQueryResponse, CompareResponse, DiscoverResponse, DiscoveryResult } from '@/types/query'
 import { useAuth } from '@/contexts/AuthContext'
+import { getStrengthEmoji, getStrengthLabel, formatMetricName } from '@/lib/discovery'
 
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
@@ -64,6 +65,15 @@ export default function CorrelationChart() {
   const [isParsingQuery, setIsParsingQuery] = useState(false)
   const [currentQuery, setCurrentQuery] = useState<ParsedQuery | null>(null)
   const [viewMode, setViewMode] = useState<'correlation' | 'trend'>('correlation')
+  
+  // Discovery mode state
+  const [discoveryMode, setDiscoveryMode] = useState(false)
+  const [discoveryResults, setDiscoveryResults] = useState<DiscoveryResult[]>([])
+  const [selectedTicker, setSelectedTicker] = useState<string>('AAPL')
+  const [isDiscovering, setIsDiscovering] = useState(false)
+  const [showAllResults, setShowAllResults] = useState(false)
+  const [isEditingTicker, setIsEditingTicker] = useState(false)
+  const [selectedResultIndex, setSelectedResultIndex] = useState(0)
 
   // Fetch correlation data based on current query parameters
   const fetchCorrelationData = async (params: ParsedQuery) => {
@@ -144,6 +154,164 @@ export default function CorrelationChart() {
     })
   }, [])
 
+  // Handle discovery mode
+  const handleDiscover = async () => {
+    try {
+      setIsDiscovering(true)
+      setLoading(true)
+      setError(null)
+      setShowAllResults(false)
+      setSelectedResultIndex(0)
+      
+      const response = await fetch('/api/discover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticker: selectedTicker,
+          startDate: currentQuery?.startDate,
+          endDate: currentQuery?.endDate
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to discover predictors')
+      }
+
+      const result: DiscoverResponse = await response.json()
+      
+      setDiscoveryResults(result.results)
+      
+      // Set the top result data
+      setData({
+        ticker: result.ticker,
+        metricX: result.topResult.metric,
+        metricY: 'price',
+        correlation: result.topResult.correlation,
+        dataPoints: result.topResult.data.length,
+        data: result.topResult.data
+      })
+      setCompareData(null)
+      setCurrentQuery({
+        ticker: result.ticker,
+        metricX: result.topResult.metric,
+        metricY: 'price',
+        startDate: currentQuery?.startDate,
+        endDate: currentQuery?.endDate
+      })
+      
+      // Set discovery mode AFTER data is loaded to prevent layout shift
+      setDiscoveryMode(true)
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to discover predictors')
+      setDiscoveryMode(false)
+    } finally {
+      setIsDiscovering(false)
+      setLoading(false)
+    }
+  }
+
+  // Handle clicking on a discovery result
+  const handleDiscoveryResultClick = async (result: DiscoveryResult, index: number) => {
+    try {
+      setLoading(true)
+      setSelectedResultIndex(index)
+      
+      const response = await fetch('/api/correlation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticker: selectedTicker,
+          metricX: result.metric,
+          metricY: 'price',
+          startDate: currentQuery?.startDate,
+          endDate: currentQuery?.endDate
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch correlation data')
+      }
+
+      const correlationData = await response.json()
+      setData(correlationData)
+      setCompareData(null)
+      setCurrentQuery({
+        ticker: selectedTicker,
+        metricX: result.metric,
+        metricY: 'price',
+        startDate: currentQuery?.startDate,
+        endDate: currentQuery?.endDate
+      })
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load correlation')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handle ticker change in discovery mode
+  const handleTickerChange = async (newTicker: string) => {
+    setSelectedTicker(newTicker)
+    setIsEditingTicker(false)
+    
+    // Re-run discovery with new ticker
+    setIsDiscovering(true)
+    setLoading(true)
+    try {
+      const response = await fetch('/api/discover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticker: newTicker,
+          startDate: currentQuery?.startDate,
+          endDate: currentQuery?.endDate
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to discover predictors')
+      }
+
+      const result: DiscoverResponse = await response.json()
+      
+      setDiscoveryResults(result.results)
+      setSelectedResultIndex(0)
+      
+      setData({
+        ticker: result.ticker,
+        metricX: result.topResult.metric,
+        metricY: 'price',
+        correlation: result.topResult.correlation,
+        dataPoints: result.topResult.data.length,
+        data: result.topResult.data
+      })
+      setCurrentQuery({
+        ticker: result.ticker,
+        metricX: result.topResult.metric,
+        metricY: 'price',
+        startDate: currentQuery?.startDate,
+        endDate: currentQuery?.endDate
+      })
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to discover predictors')
+    } finally {
+      setIsDiscovering(false)
+      setLoading(false)
+    }
+  }
+
+  // Clear discovery mode
+  const clearDiscoveryMode = () => {
+    setDiscoveryMode(false)
+    setDiscoveryResults([])
+    setShowAllResults(false)
+    setSelectedResultIndex(0)
+  }
+
   // Handle natural language query submission
   const handleQuerySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -156,6 +324,7 @@ export default function CorrelationChart() {
     try {
       setIsParsingQuery(true)
       setError(null)
+      clearDiscoveryMode()
 
       // Parse the query using Anthropic
       const parseResponse = await fetch('/api/parse-query', {
@@ -213,23 +382,67 @@ export default function CorrelationChart() {
     <div className="mb-6 space-y-4">
       <form onSubmit={handleQuerySubmit} className="flex gap-2">
         <div className="flex-1 relative">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={isApproved ? "Ask a question in natural language..." : "Available after account approval"}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${!isApproved ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-            disabled={!isApproved || isParsingQuery || loading}
-            title={!isApproved ? "Available after account approval" : ""}
-          />
+          {discoveryMode ? (
+            <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white flex items-center gap-2">
+              {isEditingTicker ? (
+                <select
+                  value={selectedTicker}
+                  onChange={(e) => handleTickerChange(e.target.value)}
+                  className="font-medium text-blue-600 bg-transparent border-none outline-none cursor-pointer"
+                  autoFocus
+                  onBlur={() => setIsEditingTicker(false)}
+                >
+                  {(['AAPL', 'AMZN', 'DELL', 'GOOGL', 'JNJ', 'META', 'MSFT', 'NKE', 'NVDA', 'TSLA', 'UBER', 'V'] as const).map((ticker) => (
+                    <option key={ticker} value={ticker}>{ticker}</option>
+                  ))}
+                </select>
+              ) : (
+                <button
+                  onClick={() => setIsEditingTicker(true)}
+                  className="font-medium text-blue-600 hover:text-blue-700 cursor-pointer"
+                >
+                  [{selectedTicker}]
+                </button>
+              )}
+              <span className="text-gray-600">{isDiscovering ? 'discovering price predictors...' : 'price predictors'}</span>
+              <button
+                onClick={clearDiscoveryMode}
+                className="ml-auto text-gray-400 hover:text-gray-600"
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={isApproved ? "Ask a question in natural language..." : "Available after account approval"}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${!isApproved ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              disabled={!isApproved || isParsingQuery || loading}
+              title={!isApproved ? "Available after account approval" : ""}
+            />
+          )}
         </div>
+        {!discoveryMode && (
+          <button
+            type="submit"
+            disabled={!isApproved || isParsingQuery || loading || !query.trim()}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+            title={!isApproved ? "Available after account approval" : ""}
+          >
+            {isParsingQuery ? 'Analyzing...' : 'Search'}
+          </button>
+        )}
         <button
-          type="submit"
-          disabled={!isApproved || isParsingQuery || loading || !query.trim()}
+          type="button"
+          onClick={handleDiscover}
+          disabled={!isApproved || isDiscovering || loading}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
           title={!isApproved ? "Available after account approval" : ""}
         >
-          {isParsingQuery ? 'Analyzing...' : 'Search'}
+          {isDiscovering ? 'Discovering...' : '🔍 Discover'}
         </button>
       </form>
 
@@ -691,33 +904,81 @@ export default function CorrelationChart() {
         
         {renderViewToggle()}
         
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold">{data.ticker} Alternative Data Analysis</h2>
-          <p className="text-gray-600 mt-2">
-            Correlation: <span className="font-semibold">{data.correlation}</span> | Data Points: {data.dataPoints}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">
-            {data.correlation > 0.7 ? '🟢 Strong positive correlation' :
-             data.correlation > 0.3 ? '🟡 Moderate positive correlation' :
-             data.correlation > -0.3 ? '⚪ Weak/no correlation' :
-             data.correlation > -0.7 ? '🟡 Moderate negative correlation' :
-             '🔴 Strong negative correlation'}
-          </p>
+        <div className={`flex gap-4 ${discoveryMode ? '' : ''}`}>
+          {discoveryMode && (
+            <div className="w-1/4 min-w-[280px]">
+              <div className="bg-white rounded-lg border border-gray-200 p-4 sticky top-4">
+                <h3 className="text-lg font-bold mb-3">🎯 Price Predictors for {selectedTicker}</h3>
+                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                  {(showAllResults ? discoveryResults : discoveryResults.slice(0, 5)).map((result, idx) => (
+                    <button
+                      key={result.metric}
+                      onClick={() => handleDiscoveryResultClick(result, idx)}
+                      className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        selectedResultIndex === idx
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-lg">{getStrengthEmoji(result.strength)}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">
+                            {idx + 1}. {formatMetricName(result.metric)}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            r = {result.correlation.toFixed(2)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {getStrengthLabel(result.correlation)}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {discoveryResults.length > 5 && (
+                  <button
+                    onClick={() => setShowAllResults(!showAllResults)}
+                    className="w-full mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {showAllResults ? '▲ Show less' : `▼ Show all ${discoveryResults.length} results`}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <div className={discoveryMode ? 'flex-1' : 'w-full'}>
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold">{data.ticker} Alternative Data Analysis</h2>
+              <p className="text-gray-600 mt-2">
+                Correlation: <span className="font-semibold">{data.correlation}</span> | Data Points: {data.dataPoints}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                {data.correlation > 0.7 ? '🟢 Strong positive correlation' :
+                 data.correlation > 0.3 ? '🟡 Moderate positive correlation' :
+                 data.correlation > -0.3 ? '⚪ Weak/no correlation' :
+                 data.correlation > -0.7 ? '🟡 Moderate negative correlation' :
+                 '🔴 Strong negative correlation'}
+              </p>
+            </div>
+            
+            {loading ? (
+              <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg">
+                <div className="text-lg text-gray-600">Updating chart...</div>
+              </div>
+            ) : viewMode === 'correlation' ? (
+              <div className="h-96">
+                <Scatter data={correlationChartData} options={correlationOptions} />
+              </div>
+            ) : (
+              <div className="h-96">
+                <Line data={trendChartData} options={trendOptions} />
+              </div>
+            )}
+          </div>
         </div>
-        
-        {loading ? (
-          <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg">
-            <div className="text-lg text-gray-600">Updating chart...</div>
-          </div>
-        ) : viewMode === 'correlation' ? (
-          <div className="h-96">
-            <Scatter data={correlationChartData} options={correlationOptions} />
-          </div>
-        ) : (
-          <div className="h-96">
-            <Line data={trendChartData} options={trendOptions} />
-          </div>
-        )}
       </div>
     )
   }
