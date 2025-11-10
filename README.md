@@ -1,6 +1,6 @@
 # Alternative Data Intelligence Dashboard
 
-A Next.js application for analyzing correlations between alternative data signals (job postings, social media sentiment, employee growth) and stock performance. Built for hedge fund interview demonstration.
+An AI-powered analytics platform for discovering correlations between alternative data signals (job postings, social media sentiment, employee growth) and stock performance. Features natural language queries, dual visualization modes, and an intelligent discovery engine for identifying predictive patterns.
 
 ---
 
@@ -15,20 +15,43 @@ A Next.js application for analyzing correlations between alternative data signal
 ## 🌟 Key Features
 
 ### 📊 Dual Visualization Modes
-- **Correlation View**: Interactive scatter plots showing metric relationships
-- **Trend View (NEW)**: Time-series with dual Y-axes for temporal analysis
-- Toggle between views with one click
-- Pearson correlation coefficient calculation
+- **Correlation View**: Interactive scatter plots showing metric relationships with Pearson correlation coefficients
+- **Trend View**: Time-series charts with dual Y-axes for temporal pattern analysis
+- Toggle between visualization modes with one click
+- Color-coded multi-stock comparisons (up to 3 stocks)
+- Interactive tooltips with detailed data points
 - 12 tickers: AAPL, AMZN, DELL, GOOGL, JNJ, META, MSFT, NKE, NVDA, TSLA, UBER, V
-- 11 alternative data metrics: job_posts, reddit_mentions, twitter_sentiment, and more
+- 11 alternative data metrics with intelligent display names
 
-### 🤖 Natural Language Queries
-- **Ask questions in plain English**: "Show correlation between job postings and price for AAPL"
+### 🤖 Natural Language Query Interface
+- **Plain English queries**: "Show correlation between job postings and price for AAPL"
 - **Multi-stock comparison**: "Compare TSLA vs NVDA Reddit sentiment" (up to 3 stocks)
-- **AI-powered parsing**: Claude Haiku 4.5 extracts structured parameters
-- **Example queries**: Clickable suggestions for quick exploration
-- **Smart error handling**: Helpful messages when queries fail
-- **Real-time feedback**: Loading states and parsed query display
+- **AI-powered parsing**: Claude Haiku 4.5 extracts structured parameters with 90% cost savings vs Sonnet
+- **Interactive query editing**: Click pill-shaped tags to modify tickers and metrics
+- **Pending changes system**: Preview and update queries before execution
+- **Smart validation**: Multi-layer error handling with actionable suggestions
+- **Real-time feedback**: Loading states, confidence scoring, and parsed parameter display
+
+### 🔍 Auto-Discovery Engine
+- **One-click discovery**: Automatically test all metrics against stock price
+- **Correlation ranking**: Results sorted by predictive strength
+- **Interactive results**: Click any discovery result to visualize the correlation
+- **Expandable view**: Show top 5 or all correlations with strength indicators
+- **Parallel processing**: Fast correlation calculations across all metrics
+
+### 🎨 Interactive Query Builder
+- **Visual query editing**: Pill-based UI for modifying tickers and metrics
+- **Add/remove tickers**: Dynamic ticker management with visual feedback
+- **Metric obfuscation**: User-friendly display names hide internal data sources
+- **Pending changes preview**: See changes before applying them
+- **Smart suggestions**: Context-aware recommendations for query improvements
+
+### 🔐 Secure Authentication & Authorization
+- **Email/password authentication**: Powered by Supabase Auth
+- **Admin approval workflow**: New users require approval before accessing data
+- **Real-time status updates**: Instant UI updates when approval status changes
+- **Email notifications**: Automated admin alerts and user welcome emails via edge functions
+- **Row Level Security**: Database-level access controls
 
 ## 🚀 Quick Start
 
@@ -45,12 +68,23 @@ bun install  # Recommended (faster)
 ```
 
 ### Environment Variables
-Create a `.env.local` file:
+Create a `.env.local` file with the following variables:
 ```bash
+# AI Features
 ANTHROPIC_API_KEY=your_anthropic_key
+
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Approval Workflow
+APPROVAL_SECRET=generate_random_string
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ADMIN_EMAIL=admin@example.com
 ```
+
+See [CLAUDE.md](CLAUDE.md) for detailed environment variable documentation.
 
 ### Run Development Server
 ```bash
@@ -71,13 +105,21 @@ bun run start
 
 Comprehensive documentation is available in the [`docs/`](./docs) directory:
 
-- **[NATURAL_LANGUAGE_QUERIES.md](./docs/NATURAL_LANGUAGE_QUERIES.md)** - Feature overview and API documentation
-- **[USAGE_GUIDE.md](./docs/USAGE_GUIDE.md)** - User guide with query examples
+### For Users
+- **[FEATURES.md](./docs/FEATURES.md)** - High-level feature overview and use cases
+- **[USAGE_GUIDE.md](./docs/USAGE_GUIDE.md)** - Complete user guide with query examples
+
+### For Developers
 - **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Technical architecture and data flow
-- **[IMPLEMENTATION_SUMMARY.md](./docs/IMPLEMENTATION_SUMMARY.md)** - Complete implementation details
-- **[DEPLOYMENT_CHECKLIST.md](./docs/DEPLOYMENT_CHECKLIST.md)** - Pre-deployment verification
-- **[DEMO_CHEAT_SHEET.md](./docs/DEMO_CHEAT_SHEET.md)** - Quick reference for interviews
-- **[BUN_OPTIMIZATIONS.md](./docs/BUN_OPTIMIZATIONS.md)** - Bun runtime optimizations and cost savings
+- **[NATURAL_LANGUAGE_QUERIES.md](./docs/NATURAL_LANGUAGE_QUERIES.md)** - API documentation and implementation details
+- **[IMPLEMENTATION_SUMMARY.md](./docs/IMPLEMENTATION_SUMMARY.md)** - Complete implementation summary
+- **[BUN_OPTIMIZATIONS.md](./docs/BUN_OPTIMIZATIONS.md)** - Bun runtime guide and performance benchmarks
+
+### For Deployment
+- **[DEPLOYMENT_CHECKLIST.md](./docs/DEPLOYMENT_CHECKLIST.md)** - Pre-deployment verification steps
+
+### For Presentations
+- **[DEMO_CHEAT_SHEET.md](./docs/DEMO_CHEAT_SHEET.md)** - Quick reference for product demonstrations
 
 ## 🧪 Testing
 
@@ -185,17 +227,25 @@ Set these in your deployment platform:
 AAPL, AMZN, DELL, GOOGL, JNJ, META, MSFT, NKE, NVDA, TSLA, UBER, V
 
 ### Metrics (11)
-- `price` - Stock price
-- `job_posts` - Job postings count
-- `reddit_mentions` - Reddit mentions
-- `twitter_mentions` - Twitter mentions
-- `reddit_sentiment` - Reddit sentiment score
-- `twitter_followers` - Twitter followers
-- `employees_linkedin` - LinkedIn employee count
-- `ai_score_employment` - AI employment score
-- `ai_score_overall` - Overall AI score
-- `stocktwits_sentiment` - StockTwits sentiment
-- `news_mentions` - News mentions
+Metrics are displayed with user-friendly names that hide internal data sources:
+
+- **Stock Price** - Daily closing price
+- **Job Postings** - Aggregated job posting counts
+- **Community Activity Index** - Reddit post mentions (reddit_mentions)
+- **Social Velocity** - Twitter/X mentions (twitter_mentions)
+- **Sentiment Alpha** - Reddit sentiment score (reddit_sentiment)
+- **Social Reach Metric** - Twitter follower count (twitter_followers)
+- **Workforce Index** - LinkedIn employee count (employees_linkedin)
+- **Hiring Momentum Score** - AI employment signal (ai_score_employment)
+- **Composite Signal** - Overall AI score (ai_score_overall)
+- **Investor Sentiment Index** - StockTwits sentiment (stocktwits_sentiment)
+- **News Mentions** - News article mentions
+
+### Data Volume
+- **~12,080 total records** across all tickers
+- **~1,000 data points per ticker**
+- **Date range**: 2024-present
+- **Daily granularity** with null value handling
 
 ## 🔐 Security
 
@@ -205,16 +255,17 @@ AAPL, AMZN, DELL, GOOGL, JNJ, META, MSFT, NKE, NVDA, TSLA, UBER, V
 - TypeScript for type safety
 - Input sanitization
 
-## 🎤 Interview Demo
+## 🎥 Feature Demonstration
 
-Quick demo flow (< 2 minutes):
-1. Show default chart
-2. Execute natural language query
-3. Click example query
-4. Demonstrate error handling
-5. Explain architecture
+Quick demonstration flow (< 3 minutes):
+1. **Natural Language Query**: Execute a plain English query
+2. **Discovery Engine**: Click "Discover" to find top correlations
+3. **Interactive Editing**: Click pills to modify query parameters
+4. **Dual Visualizations**: Toggle between Correlation and Trend views
+5. **Multi-Stock Comparison**: Compare up to 3 stocks simultaneously
+6. **Error Handling**: See intelligent error messages and suggestions
 
-See [DEMO_CHEAT_SHEET.md](./docs/DEMO_CHEAT_SHEET.md) for complete demo guide.
+See [DEMO_CHEAT_SHEET.md](./docs/DEMO_CHEAT_SHEET.md) for detailed presentation guide.
 
 ## 📈 Visualization Modes
 
@@ -239,32 +290,47 @@ See [DEMO_CHEAT_SHEET.md](./docs/DEMO_CHEAT_SHEET.md) for complete demo guide.
 - Legend clearly identifies each line
 - All stocks shown on same timeline
 
-## 🚀 Future Enhancements
+## 🚀 Potential Enhancements
 
-- [x] Multi-ticker comparison (up to 3 stocks) ✅ **COMPLETED**
-- [x] Time-series visualization with dual axes ✅ **COMPLETED**
-- [ ] Query history and favorites
-- [ ] Voice input support
-- [ ] Advanced statistical analysis (R², p-values)
-- [ ] Export results (CSV, PNG)
-- [ ] Query caching with Redis
-- [ ] Real-time data updates
-- [ ] More than 3 stocks comparison with tabbed interface
+The following features could extend the platform's capabilities:
+
+- **Query History & Favorites**: Save and recall frequently used queries
+- **Voice Input**: Speech-to-text for hands-free query input
+- **Advanced Statistics**: R², p-values, confidence intervals, and trend lines
+- **Export Functionality**: Download results as CSV, PNG, or PDF reports
+- **Query Caching**: Redis-based caching for improved performance
+- **Real-time Data**: WebSocket integration for live data updates
+- **Extended Comparison**: Support for more than 3 stocks with tabbed interface
+- **Custom Alerts**: Notification system for correlation threshold breaches
+- **API Access**: RESTful API for programmatic access to correlation engine
 
 ## 📝 License
 
-MIT License - Built for educational/interview purposes.
+MIT License
 
 ## 🙏 Acknowledgments
 
-- Next.js team for the excellent framework
-- Anthropic for Claude AI
-- Supabase for easy database setup
-- Chart.js for visualization
-- Tailwind CSS for styling
+This project leverages best-in-class technologies:
+
+- **Next.js & React 19** - Modern web framework with experimental compiler optimizations
+- **Anthropic Claude Haiku 4.5** - Cost-effective AI with reliable JSON output
+- **Supabase** - PostgreSQL database with real-time capabilities and authentication
+- **Chart.js** - Flexible visualization library for correlation and time-series charts
+- **Tailwind CSS 4** - Utility-first CSS framework
+- **Bun Runtime** - High-performance JavaScript runtime (3-4x faster than Node.js)
+
+## 🎯 Technical Highlights
+
+- **O(n) Correlation Algorithm**: Optimized single-pass Pearson coefficient calculation
+- **React 19 Compiler**: Experimental automatic memoization and optimization
+- **Three-Tier Supabase Architecture**: Separate clients for service role, SSR, and browser contexts
+- **Abort Controller Pattern**: Prevents race conditions in concurrent API requests
+- **Real-time Subscriptions**: Instant UI updates via Supabase real-time
+- **Multi-Layer Validation**: Client, API, AI, and database validation for robustness
+- **Cost Optimization**: 90% savings using Haiku 4.5 vs Sonnet with comparable performance
 
 ---
 
-**Built with**: Next.js + React + TypeScript + Claude AI  
-**Purpose**: Hedge Fund Interview - Alternative Data Analysis  
+**Tech Stack**: Next.js 16 • React 19 • TypeScript 5 • Claude Haiku 4.5 • Supabase • Bun
+**Features**: AI-Powered NLP • Dual Visualizations • Auto-Discovery • Interactive Editing
 **Status**: ✅ Production Ready
